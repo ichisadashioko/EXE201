@@ -2,3 +2,13 @@ obj
 bin
 *.db
 *.sqlite
+.node_modules
+.vscode
+.env
+.DS_Store
+*.log
+*.pdb
+*.user
+*.vs
+*.suo
+*.cache
