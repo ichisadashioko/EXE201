@@ -33,11 +33,14 @@ namespace Shioko.Controllers
                 });
             }
 
-            var auth_provider = ctx.AuthProviders.Include(obj => obj.User).Where(obj => (
-                obj.ProvideType.Equals(PROVIDER_TYPE.EMAIL)
-                && obj.ProviderKey.Equals(input_obj.email)
-                && !obj.PasswordHash.IsNullOrEmpty()
-            )).FirstOrDefault();
+            var auth_provider = ctx.AuthProviders
+                .Include(obj => obj.User)
+                .Where(obj => 
+                    obj.ProvideType == PROVIDER_TYPE.EMAIL &&
+                    obj.ProviderKey == input_obj.email &&
+                    !string.IsNullOrEmpty(obj.PasswordHash) // Replace IsNullOrEmpty with string.IsNullOrEmpty
+                )
+                .FirstOrDefault();
             if (auth_provider == null)
             {
                 return BadRequest(new

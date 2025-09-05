@@ -12,3 +12,5 @@ bin
 *.vs
 *.suo
 *.cache
+*.sqlite-*
+wwwroot/app_bundle.js
