@@ -28,6 +28,8 @@ function App() {
       <p className="read-the-docs">
         Click on the Vite and React logos to learn more
       </p>
+      <div><a href="/login"><button>Login</button></a> </div>
+      <div><a href="/signup"><button>Signup</button></a>      </div>
     </>
   )
 }

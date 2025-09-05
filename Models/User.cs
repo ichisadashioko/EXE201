@@ -11,14 +11,15 @@ namespace Shioko.Models
         public string? DisplayName { get; set; }
         // public string? Email { get; set; }
         public bool IsGuest { get; set; }
-        public required ICollection<Pet> Pets { get; set; }
-        public required ICollection<AuthProviders> AuthProviders { get; set; }
+        public virtual ICollection<Pet> Pets { get; set; }
+        public virtual ICollection<AuthProviders> AuthProviders { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 
     public static class PROVIDER_TYPE
     {
         public const string LOCAL = "LOCAL";
+        public const string EMAIL = "EMAIL";
         public const string GOOGLE = "GOOGLE";
         public const string PHONE = "PHONE";
     }
@@ -32,7 +33,7 @@ namespace Shioko.Models
         public string? PasswordHash { get; set; }
         [ForeignKey("User")]
         public int UserId { get; set; }
-        public required User User { get; set; }
+        public virtual User User { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? ModifiedAt { get; set; }
     }
@@ -44,7 +45,7 @@ namespace Shioko.Models
         public required string Url { get; set; }
         [ForeignKey("Pet")]
         public int PetId { get; set; }
-        public required Pet Pet { get; set; }
+        public virtual Pet Pet { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 
@@ -56,11 +57,11 @@ namespace Shioko.Models
         public string? Description { get; set; }
         public int? ProfilePictureId { get; set; }
         public PetPicture? ProfilePicture { get; set; }
-        public required ICollection<PetPicture> Pictures { get; set; }
+        public virtual ICollection<PetPicture> Pictures { get; set; }
         public DateTime? BirthDate { get; set; }
         [ForeignKey("User")]
         public int UserId { get; set; }
-        public required User User { get; set; }
+        public virtual User User { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? ModifiedAt { get; set; }
     }
