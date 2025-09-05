@@ -1,0 +1,13 @@
+{
+    "name": "PWA tinder for pets",
+    "short_name": "Tinpet",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#000000",
+    "icons": [
+        {
+            "src": "icon-512.png",
+            "sizes": "512x512"
+        }
+    ]
+}
