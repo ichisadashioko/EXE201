@@ -1,2 +1,4 @@
 obj
 bin
+*.db
+*.sqlite

@@ -1,14 +1,17 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
 namespace Shioko.Models
 {
     public class User
     {
+        [Key]
         public int Id { get; set; }
         public string? DisplayName { get; set; }
-        public string? Email { get; set; }
+        // public string? Email { get; set; }
         public bool IsGuest { get; set; }
-        public ICollection<Pet> Pets { get; set; }
+        public required ICollection<Pet> Pets { get; set; }
         public required ICollection<AuthProviders> AuthProviders { get; set; }
         public DateTime CreatedAt { get; set; }
     }
@@ -17,15 +20,17 @@ namespace Shioko.Models
     {
         public const string LOCAL = "LOCAL";
         public const string GOOGLE = "GOOGLE";
-        public const string FACEBOOK = "PHONE";
+        public const string PHONE = "PHONE";
     }
 
     public class AuthProviders
     {
+        [Key]
         public int AuthProviderId { get; set; }
         public required string ProvideType { get; set; }
         public required string ProviderKey { get; set; }
         public string? PasswordHash { get; set; }
+        [ForeignKey("User")]
         public int UserId { get; set; }
         public required User User { get; set; }
         public DateTime CreatedAt { get; set; }
@@ -34,8 +39,10 @@ namespace Shioko.Models
 
     public class PetPicture
     {
+        [Key]
         public int PetPictureId { get; set; }
         public required string Url { get; set; }
+        [ForeignKey("Pet")]
         public int PetId { get; set; }
         public required Pet Pet { get; set; }
         public DateTime CreatedAt { get; set; }
@@ -43,6 +50,7 @@ namespace Shioko.Models
 
     public class Pet
     {
+        [Key]
         public int PetId { get; set; }
         public required string Name { get; set; }
         public string? Description { get; set; }
@@ -50,6 +58,7 @@ namespace Shioko.Models
         public PetPicture? ProfilePicture { get; set; }
         public required ICollection<PetPicture> Pictures { get; set; }
         public DateTime? BirthDate { get; set; }
+        [ForeignKey("User")]
         public int UserId { get; set; }
         public required User User { get; set; }
         public DateTime CreatedAt { get; set; }
@@ -58,6 +67,21 @@ namespace Shioko.Models
 
     public class AppDbContext : DbContext
     {
+        public AppDbContext() { }
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            if (!optionsBuilder.IsConfigured)
+            {
+                optionsBuilder.UseSqlite("Data Source=shioko.sqlite");
+                // for sql server
+                // IConfigurationRoot configuration = new ConfigurationBuilder()
+                //     .SetBasePath(Directory.GetCurrentDirectory())
+                //     .AddJsonFile("appsettings.json")
+                //     .Build();
+                // var connectionString = configuration.GetConnectionString("Default");
+                // optionsBuilder.UseSqlServer(connectionString);
+            }
+        }
         public DbSet<User> Users { get; set; }
         public DbSet<AuthProviders> AuthProviders { get; set; }
         public DbSet<Pet> Pets { get; set; }
