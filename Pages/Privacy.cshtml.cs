@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace PWA_tinder_for_pets.Pages;
@@ -16,4 +16,3 @@ public class PrivacyModel : PageModel
     {
     }
 }
-

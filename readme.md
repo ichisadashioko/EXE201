@@ -1,4 +1,3 @@
-
 ## for ubuntu
 
 ```sh
