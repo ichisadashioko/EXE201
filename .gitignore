@@ -14,3 +14,6 @@ bin
 *.cache
 *.sqlite-*
 wwwroot/app_bundle.js
+*.Backup.tmp
+publish
+tmp_note*

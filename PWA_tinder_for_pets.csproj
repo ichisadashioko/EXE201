@@ -6,6 +6,39 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <ExcludeFilesOnPublish>
+      scripts;node_modules;package.json;package-lock.json;create-vite-ui-project;backup_package.json
+    </ExcludeFilesOnPublish>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="publish\**" />
+    <Compile Remove="scripts\**" />
+    <Compile Remove="wwwroot\create-vite-ui-project\**" />
+    <Content Remove="publish\**" />
+    <Content Remove="scripts\**" />
+    <Content Remove="wwwroot\create-vite-ui-project\**" />
+    <EmbeddedResource Remove="publish\**" />
+    <EmbeddedResource Remove="scripts\**" />
+    <EmbeddedResource Remove="wwwroot\create-vite-ui-project\**" />
+    <None Remove="publish\**" />
+    <None Remove="scripts\**" />
+    <None Remove="wwwroot\create-vite-ui-project\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="backup_package.json" />
+    <Content Remove="wwwroot\package.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="PWA_tinder_for_pets.csproj.Backup.tmp" />
+    <None Remove="shioko.sqlite" />
+    <None Remove="shioko.sqlite-shm" />
+    <None Remove="shioko.sqlite-wal" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.17">
       <PrivateAssets>all</PrivateAssets>

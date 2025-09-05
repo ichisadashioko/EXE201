@@ -22,3 +22,25 @@ sudo apt-get install mssql-tools mssql-tools18 unixodbc-dev
 ## one line delete command
 /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P '123456' -Q "DROP DATABASE PRN232_Library;"
 ```
+
+# publish artifact
+
+```cmd
+dotnet publish --os linux --self-contained true --interactive --configuration Release --output publish
+```
+
+# `scp` command
+
+```sh
+scp [options] source destination
+
+scp "C:\artifact" user@hostname:/root/data
+```
+
+# deploy note
+
+1. push artifact
+2. `chmod +x`
+3. modify `appsettings.json` to config `0.0.0.0:443` and SSL certificate location
+4. TODO change JWT secret
+5. TODO make database backup/migration

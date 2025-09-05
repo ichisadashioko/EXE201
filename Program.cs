@@ -62,7 +62,7 @@ if (!app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// app.UseHttpsRedirection();
+app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.MapControllers();
 app.UseRouting();
@@ -73,6 +73,7 @@ app.UseRouting();
 
 // app.MapRazorPages();
 
+// TODO this does not block index.html
 // redirect root to index.html
 
 string INDEX_HTML_PATH = Path.Combine(app.Environment.WebRootPath ?? "wwwroot", "index.html");
