@@ -4,6 +4,13 @@ using System.Text;
 using Shioko;
 using Shioko.Models;
 using Shioko.Services;
+using Serilog;
+
+Log.Logger = new LoggerConfiguration().MinimumLevel.Debug().WriteTo.Console()
+    .WriteTo.File("logs/tinder_logs.txt", rollingInterval: RollingInterval.Day)
+    .CreateLogger();
+
+Log.Information("logger started!");
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>();
@@ -69,7 +76,8 @@ app.UseRouting();
 //app.UseAntiforgery();
 
 // TODO: Enable authentication and authorization
- app.UseAuthorization();
+app.UseAuthentication();
+app.UseAuthorization();
 
 // app.MapRazorPages();
 

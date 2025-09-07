@@ -1,0 +1,175 @@
+// authService.js
+// A shared module for handling access token storage and API requests.
+
+// Constants for localStorage keys and API endpoints.
+const ACCESS_TOKEN_KEY = 'access_token';
+// const LOGIN_PATH = '/login'; // Adjust this to your login page path
+
+/**
+ * Stores the access token in localStorage.
+ * @param {string} token The JWT access token to store.
+ */
+export const storeAccessToken = (token: string) => {
+    try {
+        localStorage.setItem(ACCESS_TOKEN_KEY, token);
+    } catch (error) {
+        console.error('Failed to store access token:', error);
+    }
+};
+
+export default async function api_get_user_profile(token: string) {
+    try {
+        const response_obj = await fetch(
+            "/api/users/me",
+            {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    'Authorization': `Bearer ${token}`,
+                },
+            },
+        );
+
+        if (response_obj.ok) {
+            const data = await response_obj.json();
+            return {
+                success: true,
+                status_code: response_obj.status,
+                data: data,// TODO define type
+                message: "User profile retrieved successfully",
+            }
+        } else {
+            return {
+                success: false,
+                status_code: response_obj.status,
+                data: await response_obj.text(),
+                message: "Failed to retrieve user profile",
+            }
+        }
+    } catch (error) {
+        return {
+            success: false,
+            status_code: null,
+            data: null,
+            message: `An error occurred: ${error}`,
+            error: error,
+        }
+    }
+}
+
+/**
+ * Retrieves the access token from localStorage.
+ * @returns {string | null} The stored access token, or null if not found.
+ */
+export const getAccessToken = () => {
+    try {
+        return localStorage.getItem(ACCESS_TOKEN_KEY);
+    } catch (error) {
+        console.error('Failed to retrieve access token:', error);
+        return null;
+    }
+};
+
+/**
+ * Removes the access token from localStorage.
+ */
+export const removeAccessToken = () => {
+    try {
+        localStorage.removeItem(ACCESS_TOKEN_KEY);
+    } catch (error) {
+        console.error('Failed to remove access token:', error);
+    }
+};
+
+/**
+ * Wraps the fetch API to handle expired tokens.
+ * If the token is invalid or expired (e.g., a 401 response), it removes the token,
+ * redirects to the login page, and stores the current path for redirection after login.
+ * @param {string} url The URL for the fetch request.
+ * @param {object} options The options for the fetch request.
+ * @returns {Promise<Response>} The fetch response.
+ */
+// export const fetchWithAuth = async (url, options = {}) => {
+//     const token = getAccessToken();
+
+//     if (!token) {
+//         // No token found, redirect to login.
+//         console.warn('No access token found. Redirecting to login.');
+//         localStorage.setItem('redirect_path', window.location.pathname);
+//         window.location.href = LOGIN_PATH;
+//         return; // Or throw an error to stop execution
+//     }
+
+//     // Add the Authorization header to the request.
+//     const headers = {
+//         ...options.headers,
+//         'Authorization': `Bearer ${token}`
+//     };
+
+//     try {
+//         const response = await fetch(url, { ...options, headers });
+
+//         // Check for an unauthorized response (401 status code).
+//         if (response.status === 401) {
+//             console.warn('Authentication failed (401 Unauthorized). Token may be expired.');
+//             removeAccessToken();
+//             localStorage.setItem('redirect_path', window.location.pathname);
+//             window.location.href = LOGIN_PATH;
+//             // Throw an error to stop further processing in the calling function.
+//             throw new Error('Unauthorized');
+//         }
+
+//         return response;
+//     } catch (error) {
+//         console.error('An error occurred during the fetch request:', error);
+//         // Rethrow the error to be handled by the calling function.
+//         throw error;
+//     }
+// };
+
+// Example usage within a React component (for demonstration purposes):
+/*
+import React, { useEffect, useState } from 'react';
+import { fetchWithAuth } from './authService';
+
+const UserProfile = () => {
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await fetchWithAuth('https://api.example.com/profile');
+        if (response && response.ok) {
+          const data = await response.json();
+          setUserData(data);
+        }
+      } catch (error) {
+        // The fetchWithAuth function handles redirection, so we can just log the error here.
+        console.error('Could not fetch user profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!userData) {
+    return <div>Failed to load user data.</div>;
+  }
+
+  return (
+    <div>
+      <h1>Welcome, {userData.name}</h1>
+      <p>Email: {userData.email}</p>
+    </div>
+  );
+};
+
+export default UserProfile;
+*/

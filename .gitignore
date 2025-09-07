@@ -17,3 +17,6 @@ wwwroot/app_bundle.js
 *.Backup.tmp
 publish
 tmp_note*
+appsettings.Production.json
+tinder.service
+logs

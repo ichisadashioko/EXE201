@@ -5,6 +5,7 @@ import App from './App.tsx'
 import { BrowserRouter, Routes, Route } from 'react-router';
 import Login from './Login.tsx';
 import Signup from './Signup.tsx';
+import Home from './users/Home.tsx';
 
 createRoot(document.getElementById('root')!).render(
   <BrowserRouter>
@@ -13,6 +14,7 @@ createRoot(document.getElementById('root')!).render(
       <Route path="/index.html" element={<App />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route path="/home" element={<Home />} />
     </Routes>
   </BrowserRouter>,
 )

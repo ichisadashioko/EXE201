@@ -1,5 +1,7 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +22,69 @@ namespace Shioko.Controllers
         {
             this.ctx = ctx;
             this.token_service = token_service;
+        }
+
+        [HttpGet("/api/users/me")]
+        [Authorize]
+        public async Task<ActionResult> GetCurrentUser()
+        {
+            // TODO get user id from claim
+            foreach (var claim in User.Claims)
+            {
+                Console.WriteLine($"Claim: {claim.Type} = {claim.Value}");
+            }
+
+            // var user_id_claim = User.FindFirst(JwtRegisteredClaimNames.Sub);
+            var user_id_claim = User.FindFirst(CustomClaimTypes.UserId);
+            if (user_id_claim == null)
+            {
+                return Unauthorized(new { message = "User ID not found in token" });
+            }
+
+            if (Int32.TryParse(user_id_claim.Value, out int user_id))
+            {
+                var user = await ctx.Users
+                    .Include(obj => obj.Pets)
+                    .Where(obj => obj.Id == user_id) // TODO add active check
+                    .Select(obj => new
+                    {
+                        id = obj.Id,
+                        is_guest = obj.IsGuest,
+                        created_at = obj.CreatedAt,
+                        pets = obj.Pets.Select(pet => new
+                        {
+                            id = pet.PetId,
+                            name = pet.Name,
+                            description = pet.Description,
+                            //species = pet.Species,
+                            //breed = pet.Breed,
+                            //age = pet.Age,
+                            //bio = pet.Bio,
+                            created_at = pet.CreatedAt,
+                        }).ToList(),
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (user == null)
+                {
+                    return NotFound(new
+                    {
+                        message = "User not found"
+                    });
+                }
+
+                return Ok(new
+                {
+                    user = user
+                });
+            }
+            else
+            {
+                return Unauthorized(new
+                {
+                    message = "Invalid user ID in token"
+                });
+            }
         }
 
         [HttpPost("/api/users/login_with_email")]

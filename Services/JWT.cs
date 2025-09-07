@@ -15,6 +15,11 @@ namespace Shioko.Services
         public int ExpiryInMinutes { get; set; }
     }
 
+    public static class CustomClaimTypes
+    {
+        public const string UserId = "user_id";
+    }
+
     public class TokenService
     {
         public readonly JwtSettings _jwtSettings;
@@ -33,7 +38,9 @@ namespace Shioko.Services
 
             var claims = new[]
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString())
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                //new Claim(CustomClaimTypes.UserId, user.Id),
+                new Claim(CustomClaimTypes.UserId, user.Id.ToString()),
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key));
