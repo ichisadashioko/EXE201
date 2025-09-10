@@ -17,15 +17,67 @@ export const storeAccessToken = (token: string) => {
   }
 };
 
-export async function api_get_pet_info(token: string, pet_id: string) {
+export async function api_upload_pet_image(
+  token: string,
+  pet_id: string,
+  image_file: File,
+) {
+  try {
+    const form_data = new FormData();
+    form_data.append('name', image_file.name);
+    form_data.append('file', image_file);
 
+    const response_obj = await fetch(
+      `/api/pets/${pet_id}/images/upload`,
+      {
+        method: 'POST',
+        headers: {
+          // 'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: form_data,
+        // body: image_file,
+        // body: JSON.stringify({
+        //   name: pet_name,
+        // }),
+      },
+    );
+
+    if (response_obj.ok) {
+      const data = await response_obj.json();
+      return {
+        success: true,
+        status_code: response_obj.status,
+        data: data,// TODO define type
+        message: 'OK',
+      }
+    } else {
+      return {
+        success: false,
+        status_code: response_obj.status,
+        data: await response_obj.text(),
+        message: 'Failed to get pet info',
+      }
+    }
+  } catch (error) {
+    return {
+      success: false,
+      status_code: null,
+      data: null,
+      message: `An error occurred: ${error}`,
+      error: error,
+    }
+  }
+}
+
+export async function api_get_pet_info(token: string, pet_id: string) {
   try {
     const response_obj = await fetch(
       `/api/pets/${pet_id}`,
       {
-        method: "GET",
+        method: 'GET',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
         // body: JSON.stringify({
@@ -40,14 +92,14 @@ export async function api_get_pet_info(token: string, pet_id: string) {
         success: true,
         status_code: response_obj.status,
         data: data,// TODO define type
-        message: "OK",
+        message: 'OK',
       }
     } else {
       return {
         success: false,
         status_code: response_obj.status,
         data: await response_obj.text(),
-        message: "Failed to get pet info",
+        message: 'Failed to get pet info',
       }
     }
   } catch (error) {
@@ -64,11 +116,11 @@ export async function api_get_pet_info(token: string, pet_id: string) {
 export async function api_create_new_pet(token: string, pet_name: string) {
   try {
     const response_obj = await fetch(
-      "/api/pets/new",
+      '/api/pets/new',
       {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -83,14 +135,14 @@ export async function api_create_new_pet(token: string, pet_name: string) {
         success: true,
         status_code: response_obj.status,
         data: data,// TODO define type
-        message: "Pet created successfully",
+        message: 'Pet created successfully',
       }
     } else {
       return {
         success: false,
         status_code: response_obj.status,
         data: await response_obj.text(),
-        message: "Failed to create pet",
+        message: 'Failed to create pet',
       }
     }
   } catch (error) {
@@ -107,11 +159,11 @@ export async function api_create_new_pet(token: string, pet_name: string) {
 export default async function api_get_user_profile(token: string) {
   try {
     const response_obj = await fetch(
-      "/api/users/me",
+      '/api/users/me',
       {
-        method: "GET",
+        method: 'GET',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
       },
@@ -123,14 +175,14 @@ export default async function api_get_user_profile(token: string) {
         success: true,
         status_code: response_obj.status,
         data: data,// TODO define type
-        message: "User profile retrieved successfully",
+        message: 'User profile retrieved successfully',
       }
     } else {
       return {
         success: false,
         status_code: response_obj.status,
         data: await response_obj.text(),
-        message: "Failed to retrieve user profile",
+        message: 'Failed to retrieve user profile',
       }
     }
   } catch (error) {

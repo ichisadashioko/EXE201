@@ -1,14 +1,17 @@
 import { useNavigate } from "react-router";
 import { api_create_new_pet, getAccessToken } from "../authentication";
+import { useEffect } from "react";
 
 export default function NewPet() {
     const navigate = useNavigate();
     const access_token = getAccessToken();
-    if (access_token == null) {
-        console.log("Access token is null, redirecting to login page");
-        navigate("/login");
-        return null;
-    }
+
+    useEffect(() => {
+        if (access_token == null) {
+            console.log("Access token is null, redirecting to login page");
+            navigate("/login");
+        }
+    });
 
     return (
         <div>
@@ -27,6 +30,13 @@ export default function NewPet() {
                         console.error("Pet name input element not found");
                         return;
                     }
+
+                    if (access_token == null) {
+                        console.error("Access token is null, cannot create pet");
+                        navigate("/login");
+                        return;
+                    }
+
                     let pet_name = pet_name_input.value;
                     console.log(`Pet name: ${pet_name}`);
                     // TODO call API to create pet

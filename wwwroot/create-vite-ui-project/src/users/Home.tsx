@@ -8,27 +8,27 @@ export default function Home() {
     let [tmp_user_profile_json_obj, set_tmp_user_profile_json_obj] = useState<any>(null);
     const navigate = useNavigate();
     const access_token = getAccessToken();
-    if (access_token == null) {
-        console.log("Access token is null, redirecting to login page");
-        navigate("/login");
-        return null;
-    }
 
     useEffect(() => {
-        // TODO fetch user profile
-        const load_data = async () => {
-            const user_profile_response = await api_get_user_profile(access_token);
-            console.debug(user_profile_response);
-            if (user_profile_response.success) {
-                set_tmp_user_profile_json_obj(user_profile_response);
-            } else {
-                console.error("Failed to fetch user profile:", user_profile_response.message);
-                alert(`Failed to fetch user profile: ${user_profile_response.message}`);
-                navigate("/login");
-            }
-        };
+        if (access_token == null) {
+            console.log("Access token is null, redirecting to login page");
+            navigate("/login");
+        } else {
+            // TODO fetch user profile
+            const load_data = async () => {
+                const user_profile_response = await api_get_user_profile(access_token);
+                console.debug(user_profile_response);
+                if (user_profile_response.success) {
+                    set_tmp_user_profile_json_obj(user_profile_response);
+                } else {
+                    console.error("Failed to fetch user profile:", user_profile_response.message);
+                    alert(`Failed to fetch user profile: ${user_profile_response.message}`);
+                    navigate("/login");
+                }
+            };
 
-        load_data();
+            load_data();
+        }
     }, [])
     return (
         <div>

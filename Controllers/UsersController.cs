@@ -79,10 +79,13 @@ namespace Shioko.Controllers
                 //}
 
                 //var pet_obj = ctx.Pets.Where(obj => ((obj.PetId == petId) && (obj.UserId == user_id))).FirstOrDefault();
-                var pet_obj = ctx.Pets.Where(obj => (
-                (obj.PetId == petId)
-                //&& (obj.UserId == user_id)
-                )).FirstOrDefault();
+                var pet_obj = ctx.Pets
+                    .Include(obj => obj.ProfilePicture)
+                    .Include(obj => obj.Pictures)
+                    .Where(obj => (
+                        (obj.PetId == petId)
+                    //&& (obj.UserId == user_id)
+                    )).FirstOrDefault();
                 if (pet_obj == null)
                 {
                     return BadRequest(new
@@ -96,6 +99,12 @@ namespace Shioko.Controllers
                     id = pet_obj.PetId,
                     name = pet_obj.Name,
                     description = pet_obj.Description,
+                    images = pet_obj.Pictures.Select(picture => new
+                    {
+                        id = picture.PetPictureId,
+                        url = picture.Url,
+                        created_ts = picture.CreatedAt.ToFileTimeUtc(),
+                    }),
                     // TODO
                 });
             }
@@ -194,13 +203,19 @@ namespace Shioko.Controllers
             }
         }
 
+        public class upload_image_dto
+        {
+            public required string name { get; set; }
+            public required IFormFile file { get; set; }
+        }
+
         public const int UPLOAD_IMAGE_SIZE_LIMIT = 5242880; // (5 * 1024 * 1024);
 
         [HttpPost("/api/pets/{petId}/images/upload")]
         [Authorize]
         [RequestSizeLimit(UPLOAD_IMAGE_SIZE_LIMIT)]
         [RequestFormLimits(MultipartBodyLengthLimit = UPLOAD_IMAGE_SIZE_LIMIT)]
-        public async Task<ActionResult> UploadPetImage(IFormFile file, [FromRoute] int petId)
+        public async Task<ActionResult> UploadPetImage([FromForm] upload_image_dto input_obj, [FromRoute] int petId)
         {
             try
             {
@@ -211,6 +226,8 @@ namespace Shioko.Controllers
                         message = "bad request", // TODO replace with error status code
                     });
                 }
+
+                var file = input_obj.file;
 
                 var user_id_claim = User.FindFirst(CustomClaimTypes.UserId);
                 if (user_id_claim == null)
