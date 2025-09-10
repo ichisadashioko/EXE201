@@ -5,15 +5,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
-    <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.css">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.css">
 </head>
 
 <body>
     <div id="root"></div>
-    <script src="app.js" defer></script>
-    <script type="module" crossorigin src="app_bundle.js"></script>
+    <script src="/app.js" defer></script>
+    <script type="module" crossorigin src="/app_bundle.js"></script>
     <script>
         // if ('serviceWorker' in navigator) {
         //     window.addEventListener('load', () => {
@@ -28,7 +28,7 @@
         // }
 
         if ("serviceWorker" in navigator) {
-            navigator.serviceWorker.register("sw.js").then(
+            navigator.serviceWorker.register("/sw.js").then(
                 (registration) => {
                     console.log("Service worker registration successful:", registration);
                 },

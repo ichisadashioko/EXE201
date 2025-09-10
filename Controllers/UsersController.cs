@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
 using System.Text;
+using Google.Cloud.Storage.V1;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -17,11 +18,365 @@ namespace Shioko.Controllers
     {
         private readonly AppDbContext ctx;
         private readonly TokenService token_service;
+        private readonly StorageClient google_cloud_storage_client;
+        private readonly GoogleCloudStorageConfig gcs_config;
 
-        public UsersController(AppDbContext ctx, TokenService token_service)
+        public UsersController(
+            AppDbContext ctx,
+            TokenService token_service,
+            StorageClient google_cloud_storage_client,
+            GoogleCloudStorageConfig gcs_config
+        )
         {
             this.ctx = ctx;
             this.token_service = token_service;
+            this.google_cloud_storage_client = google_cloud_storage_client;
+            this.gcs_config = gcs_config;
+        }
+
+        [HttpGet("api/pets/{petId}")]
+        public async Task<ActionResult> GetPetInfo([FromRoute] int petId)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new
+                    {
+                        message = "bad request", // TODO replace with error status code
+                    });
+                }
+
+                //var user_id_claim = User.FindFirst(CustomClaimTypes.UserId);
+                //if (user_id_claim == null)
+                //{
+                //    return Unauthorized(new
+                //    {
+                //        message = "User ID not found in token", // TODO replace with error status code
+                //    });
+                //}
+
+                //int user_id;
+
+                //if (!Int32.TryParse(user_id_claim.Value, out user_id))
+                //{
+                //    return Unauthorized(new
+                //    {
+                //        message = "Invalid user ID in token"
+                //    });
+                //}
+
+                //var user = await ctx.Users
+                //    .Where(obj => obj.Id == user_id) // TODO add active check
+                //    .FirstOrDefaultAsync();
+
+                //if (user == null)
+                //{
+                //    return Unauthorized(new
+                //    {
+                //        message = "User not found"
+                //    });
+                //}
+
+                //var pet_obj = ctx.Pets.Where(obj => ((obj.PetId == petId) && (obj.UserId == user_id))).FirstOrDefault();
+                var pet_obj = ctx.Pets.Where(obj => (
+                (obj.PetId == petId)
+                //&& (obj.UserId == user_id)
+                )).FirstOrDefault();
+                if (pet_obj == null)
+                {
+                    return BadRequest(new
+                    {
+                        message = "bad request | this is not your pet. what are you trying to do",
+                    });
+                }
+
+                return Ok(new
+                {
+                    id = pet_obj.PetId,
+                    name = pet_obj.Name,
+                    description = pet_obj.Description,
+                    // TODO
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                Console.WriteLine(ex.Message);
+                return StatusCode(500, new
+                {
+                    message = "internal server error",
+                });
+            }
+        }
+
+        public class new_pet_dto
+        {
+            public required string name { get; set; }
+        }
+
+        [HttpPost("api/pets/new")]
+        [Authorize]
+        public async Task<ActionResult> CreateNewPet([FromBody] new_pet_dto input_obj)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new
+                    {
+                        message = "bad request", // TODO replace with error status code
+                    });
+                }
+
+                var user_id_claim = User.FindFirst(CustomClaimTypes.UserId);
+                if (user_id_claim == null)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User ID not found in token", // TODO replace with error status code
+                    });
+                }
+
+                if (Int32.TryParse(user_id_claim.Value, out int user_id))
+                {
+                    var user = await ctx.Users
+                        .Where(obj => obj.Id == user_id) // TODO add active check
+                        .FirstOrDefaultAsync();
+
+                    if (user == null)
+                    {
+                        return Unauthorized(new
+                        {
+                            message = "User not found"
+                        });
+                    }
+
+                    Pet pet = new Pet()
+                    {
+                        Name = input_obj.name,
+                        UserId = user.Id,
+                    };
+
+                    await ctx.Pets.AddAsync(pet);
+                    await ctx.SaveChangesAsync();
+
+                    return Ok(new
+                    {
+                        message = "OK",
+                        pet = new
+                        {
+                            id = pet.PetId,
+                        },
+                    });
+
+                    //return Ok(new
+                    //{
+                    //    user = user
+                    //});
+                }
+                else
+                {
+                    return Unauthorized(new
+                    {
+                        message = "Invalid user ID in token"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                Console.WriteLine(ex.Message);
+                return StatusCode(500, new
+                {
+                    message = "internal server error",
+                });
+            }
+        }
+
+        public const int UPLOAD_IMAGE_SIZE_LIMIT = 5242880; // (5 * 1024 * 1024);
+
+        [HttpPost("/api/pets/{petId}/images/upload")]
+        [Authorize]
+        [RequestSizeLimit(UPLOAD_IMAGE_SIZE_LIMIT)]
+        [RequestFormLimits(MultipartBodyLengthLimit = UPLOAD_IMAGE_SIZE_LIMIT)]
+        public async Task<ActionResult> UploadPetImage(IFormFile file, [FromRoute] int petId)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new
+                    {
+                        message = "bad request", // TODO replace with error status code
+                    });
+                }
+
+                var user_id_claim = User.FindFirst(CustomClaimTypes.UserId);
+                if (user_id_claim == null)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User ID not found in token", // TODO replace with error status code
+                    });
+                }
+
+                int user_id;
+
+                if (!Int32.TryParse(user_id_claim.Value, out user_id))
+                {
+                    return Unauthorized(new
+                    {
+                        message = "Invalid user ID in token"
+                    });
+                }
+
+                var user = await ctx.Users
+                    .Where(obj => obj.Id == user_id) // TODO add active check
+                    .FirstOrDefaultAsync();
+
+                if (user == null)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User not found"
+                    });
+                }
+
+                if (file == null || file.Length == 0)
+                {
+                    return BadRequest(new
+                    {
+                        message = "No file uploaded",
+                    });
+                }
+
+                var pet_obj = ctx.Pets.Where(obj => ((obj.PetId == petId) && (obj.UserId == user_id))).FirstOrDefault();
+                if (pet_obj == null)
+                {
+                    return BadRequest(new
+                    {
+                        message = "bad request | this is not your pet. what are you trying to do",
+                    });
+                }
+
+                using (var stream = file.OpenReadStream())
+                {
+                    if (stream.Length > UPLOAD_IMAGE_SIZE_LIMIT)
+                    {
+                        return BadRequest(new
+                        {
+                            message = "file size exceeds limit",
+                        });
+                    }
+
+                    // TODO extract this code
+                    string? media_type = null;
+                    // check with request header media type
+                    var buffer = new byte[8];
+                    await stream.ReadAsync(buffer, 0, buffer.Length);
+                    // Check for PNG (89 50 4E 47 0D 0A 1A 0A)
+                    if (buffer[0] == 0x89 && buffer[1] == 0x50 && buffer[2] == 0x4E && buffer[3] == 0x47 &&
+                       buffer[4] == 0x0D && buffer[5] == 0x0A && buffer[6] == 0x1A && buffer[7] == 0x0A)
+                    {
+                        // It's a PNG
+                        media_type = "image/png";
+                    }
+                    // Check for JPEG (FF D8 FF)
+                    else if (buffer[0] == 0xFF && buffer[1] == 0xD8 && buffer[2] == 0xFF)
+                    {
+                        // It's a JPEG
+                        media_type = "image/jpeg";
+                    }
+                    else
+                    {
+                        return BadRequest(new
+                        {
+                            message = "Unsupported file type",
+                        });
+                    }
+
+                    stream.Seek(0, SeekOrigin.Begin);
+                    // TODO check file content
+
+                    // TODO check image content with Vision API
+
+                    if (string.IsNullOrWhiteSpace(media_type))
+                    {
+                        // TODO
+                        return BadRequest(new
+                        {
+                            message = "invalid image file",
+                        });
+                    }
+
+                    string bucketName = gcs_config.BUCKET_NAME;
+                    string objectName = $"users/upload/{Guid.NewGuid()}";
+
+                    try
+                    {
+                        var gcs_object = google_cloud_storage_client.UploadObject(bucketName, objectName, media_type, stream);
+                        if (gcs_object == null)
+                        {
+                            return StatusCode(500, new
+                            {
+                                message = "internal server error | failed to upload image",
+                            });
+                        }
+                        var public_image_url = gcs_object.MediaLink;
+                        PetPicture picture = new PetPicture()
+                        {
+                            Url = public_image_url,
+                            CreatedAt = DateTime.UtcNow,
+                            PetId = petId,
+                        };
+                        await ctx.PetPictures.AddAsync(picture);
+                        await ctx.SaveChangesAsync();
+
+                        return Ok(new
+                        {
+                            message = "OK",
+                            image_info = new
+                            {
+                                id = picture.PetPictureId,
+                                url = picture.Url,
+                                created_ts = picture.CreatedAt.ToFileTimeUtc(),// TODO unix timestamp
+                            },
+                        });
+                    }
+                    catch (Exception gcs_ex)
+                    {
+                        Console.WriteLine(gcs_ex);
+                        Console.WriteLine(gcs_ex.Message);
+                        // TODO add more specific error code and status code
+                        return StatusCode(500, new
+                        {
+                            message = "internal server error | failed to upload image",
+                            //message = "internal server error",
+                        });
+                        // TODO
+                    }
+                }
+                // TODO validate file type using magic header
+                //var stream = file.OpenReadStream();
+                //stream.ReadAsync();
+
+                return StatusCode(500, "TODO");
+                //return Ok(new
+                //{
+                //    user = user
+                //});
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                Console.WriteLine(ex.Message);
+                return StatusCode(500, new
+                {
+                    message = "internal server error",
+                });
+            }
         }
 
         [HttpGet("/api/users/me")]

@@ -10,3 +10,4 @@
 
 - backend
     - [ ] TODO
+    - [ ] pets image upload endpoint

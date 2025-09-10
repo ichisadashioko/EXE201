@@ -10,51 +10,138 @@ const ACCESS_TOKEN_KEY = 'access_token';
  * @param {string} token The JWT access token to store.
  */
 export const storeAccessToken = (token: string) => {
-    try {
-        localStorage.setItem(ACCESS_TOKEN_KEY, token);
-    } catch (error) {
-        console.error('Failed to store access token:', error);
-    }
+  try {
+    localStorage.setItem(ACCESS_TOKEN_KEY, token);
+  } catch (error) {
+    console.error('Failed to store access token:', error);
+  }
 };
 
-export default async function api_get_user_profile(token: string) {
-    try {
-        const response_obj = await fetch(
-            "/api/users/me",
-            {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                    'Authorization': `Bearer ${token}`,
-                },
-            },
-        );
+export async function api_get_pet_info(token: string, pet_id: string) {
 
-        if (response_obj.ok) {
-            const data = await response_obj.json();
-            return {
-                success: true,
-                status_code: response_obj.status,
-                data: data,// TODO define type
-                message: "User profile retrieved successfully",
-            }
-        } else {
-            return {
-                success: false,
-                status_code: response_obj.status,
-                data: await response_obj.text(),
-                message: "Failed to retrieve user profile",
-            }
-        }
-    } catch (error) {
-        return {
-            success: false,
-            status_code: null,
-            data: null,
-            message: `An error occurred: ${error}`,
-            error: error,
-        }
+  try {
+    const response_obj = await fetch(
+      `/api/pets/${pet_id}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`,
+        },
+        // body: JSON.stringify({
+        //   name: pet_name,
+        // }),
+      },
+    );
+
+    if (response_obj.ok) {
+      const data = await response_obj.json();
+      return {
+        success: true,
+        status_code: response_obj.status,
+        data: data,// TODO define type
+        message: "OK",
+      }
+    } else {
+      return {
+        success: false,
+        status_code: response_obj.status,
+        data: await response_obj.text(),
+        message: "Failed to get pet info",
+      }
     }
+  } catch (error) {
+    return {
+      success: false,
+      status_code: null,
+      data: null,
+      message: `An error occurred: ${error}`,
+      error: error,
+    }
+  }
+}
+
+export async function api_create_new_pet(token: string, pet_name: string) {
+  try {
+    const response_obj = await fetch(
+      "/api/pets/new",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: pet_name,
+        }),
+      },
+    );
+
+    if (response_obj.ok) {
+      const data = await response_obj.json();
+      return {
+        success: true,
+        status_code: response_obj.status,
+        data: data,// TODO define type
+        message: "Pet created successfully",
+      }
+    } else {
+      return {
+        success: false,
+        status_code: response_obj.status,
+        data: await response_obj.text(),
+        message: "Failed to create pet",
+      }
+    }
+  } catch (error) {
+    return {
+      success: false,
+      status_code: null,
+      data: null,
+      message: `An error occurred: ${error}`,
+      error: error,
+    }
+  }
+}
+
+export default async function api_get_user_profile(token: string) {
+  try {
+    const response_obj = await fetch(
+      "/api/users/me",
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (response_obj.ok) {
+      const data = await response_obj.json();
+      return {
+        success: true,
+        status_code: response_obj.status,
+        data: data,// TODO define type
+        message: "User profile retrieved successfully",
+      }
+    } else {
+      return {
+        success: false,
+        status_code: response_obj.status,
+        data: await response_obj.text(),
+        message: "Failed to retrieve user profile",
+      }
+    }
+  } catch (error) {
+    return {
+      success: false,
+      status_code: null,
+      data: null,
+      message: `An error occurred: ${error}`,
+      error: error,
+    }
+  }
 }
 
 /**
@@ -62,23 +149,23 @@ export default async function api_get_user_profile(token: string) {
  * @returns {string | null} The stored access token, or null if not found.
  */
 export const getAccessToken = () => {
-    try {
-        return localStorage.getItem(ACCESS_TOKEN_KEY);
-    } catch (error) {
-        console.error('Failed to retrieve access token:', error);
-        return null;
-    }
+  try {
+    return localStorage.getItem(ACCESS_TOKEN_KEY);
+  } catch (error) {
+    console.error('Failed to retrieve access token:', error);
+    return null;
+  }
 };
 
 /**
  * Removes the access token from localStorage.
  */
 export const removeAccessToken = () => {
-    try {
-        localStorage.removeItem(ACCESS_TOKEN_KEY);
-    } catch (error) {
-        console.error('Failed to remove access token:', error);
-    }
+  try {
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+  } catch (error) {
+    console.error('Failed to remove access token:', error);
+  }
 };
 
 /**
