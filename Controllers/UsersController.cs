@@ -356,6 +356,7 @@ namespace Shioko.Controllers
         }
 
         [HttpGet("/api/pets/{petId}")]
+        [Authorize]
         public async Task<ActionResult> GetPetInfo([FromRoute] int petId)
         {
             try
@@ -368,36 +369,39 @@ namespace Shioko.Controllers
                     });
                 }
 
-                //var user_id_claim = User.FindFirst(CustomClaimTypes.UserId);
-                //if (user_id_claim == null)
-                //{
-                //    return Unauthorized(new
-                //    {
-                //        message = "User ID not found in token", // TODO replace with error status code
-                //    });
-                //}
+                var user_id_claim = User.FindFirst(CustomClaimTypes.UserId);
+                if (user_id_claim == null)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "Unauthorized",
+                        //message = "User ID not found in token", // TODO replace with error status code
+                    });
+                }
 
-                //int user_id;
+                int user_id;
 
-                //if (!Int32.TryParse(user_id_claim.Value, out user_id))
-                //{
-                //    return Unauthorized(new
-                //    {
-                //        message = "Invalid user ID in token"
-                //    });
-                //}
+                if (!Int32.TryParse(user_id_claim.Value, out user_id))
+                {
+                    return Unauthorized(new
+                    {
+                        //message = "Invalid user ID in token",
+                        message = "Unauthorized",
+                    });
+                }
 
-                //var user = await ctx.Users
-                //    .Where(obj => obj.Id == user_id) // TODO add active check
-                //    .FirstOrDefaultAsync();
+                var user = await ctx.Users
+                    .Where(obj => obj.Id == user_id) // TODO add active check
+                    .FirstOrDefaultAsync();
 
-                //if (user == null)
-                //{
-                //    return Unauthorized(new
-                //    {
-                //        message = "User not found"
-                //    });
-                //}
+                if (user == null)
+                {
+                    return Unauthorized(new
+                    {
+                        //message = "User not found"
+                        message = "Unauthorized",
+                    });
+                }
 
                 //var pet_obj = ctx.Pets.Where(obj => ((obj.PetId == petId) && (obj.UserId == user_id))).FirstOrDefault();
                 var pet_obj = ctx.Pets
@@ -411,7 +415,7 @@ namespace Shioko.Controllers
                 {
                     return BadRequest(new
                     {
-                        message = "bad request | this is not your pet. what are you trying to do",
+                        message = "bad request",
                     });
                 }
 
@@ -419,7 +423,11 @@ namespace Shioko.Controllers
                 {
                     id = pet_obj.PetId,
                     name = pet_obj.Name,
+                    owner_id = pet_obj.UserId,
+                    can_edit = (pet_obj.UserId == user_id),
                     description = pet_obj.Description,
+                    profile_image_id = pet_obj.ProfilePictureId,
+                    profile_image_url = ((pet_obj.ProfilePicture == null) ? null : pet_obj.ProfilePicture.Url),
                     images = pet_obj.Pictures.Select(picture => new
                     {
                         id = picture.PetPictureId,
