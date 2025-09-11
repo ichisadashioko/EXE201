@@ -77,6 +77,7 @@ if (!string.IsNullOrWhiteSpace(GOOGLE_STORAGE_CLIENT_PROXY))
 {
     Console.WriteLine("test google cloud storage client config");
     // test for upload and other required permissions
+    // TODO
     var retval = storage_client.ListObjects(GOOGLE_CLOUD_STORAGE_BUCKET_NAME);
     foreach (var item in retval)
     {

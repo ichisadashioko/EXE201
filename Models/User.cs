@@ -82,6 +82,8 @@ namespace Shioko.Models
         public virtual Pet Pet { get; set; }
         // set to Pet's modified time or creation time of modified time is null
         public DateTime PetVersionTime { get; set; } // TODO implement more robust snapshot data model
+        public string SnapshotJsonData { get; set; } // json string of pet data at the time of matching
+        public int Rating { get; set; } // -1: dislike, 0: neutral, 1: like
 
         public DateTime CreatedAt { get; set; }
         // for swiping back and reconsidering the rating choice

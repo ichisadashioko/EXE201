@@ -7,6 +7,9 @@
 # VS Package Manager Console
 Add-Migration AddMatchingRecord
 Update-Database
+
+Add-Migration MatchingRecordRating
+Update-Database
 ```
 
 ## for ubuntu
