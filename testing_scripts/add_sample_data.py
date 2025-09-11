@@ -109,8 +109,8 @@ def upload_image(access_token: str, pet_id: int, image_path: str):
         print(f'status_code: {status_code}')
         if status_code != 200:
             print(response_obj.content)
-            return False
-        return True
+            return None
+        return response_obj.json()['image_info']['id']
 
 def get_all_regular_files(root_dir):
     all_files = []
@@ -120,6 +120,29 @@ def get_all_regular_files(root_dir):
             if os.path.isfile(full_path):
                 all_files.append(full_path)
     return all_files
+
+def set_image_as_profile(access_token: str, pet_id: int, image_id: int):
+    # /api/pets/{pet_id}/set_profile_image/{image_id}
+    url = f'{URL_ROOT}/api/pets/{pet_id}/set_profile_image/{image_id}'
+    print(url)
+
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+    }
+
+    response_obj = requests.post(
+        url,
+        headers=headers,
+        verify=False,
+    )
+
+    status_code = response_obj.status_code
+    print(f'status_code: {status_code}')
+    if status_code != 200:
+        print(response_obj.content)
+        return None
+
+    return response_obj.json()
 
 image_dir = '../../dogs_and_cats_dataset/training_set'
 image_dir = os.path.realpath(image_dir)
@@ -153,8 +176,19 @@ for i in range(num_users):
         print(f'Uploading {num_images_to_upload} images for pet {pet_id}...')
         for image_filepath in sampled_image_filepaths:
             print(f'Uploading image: {image_filepath} ...')
-            success = upload_image(access_token, pet_id, image_filepath)
-            if not success:
+            image_id = upload_image(access_token, pet_id, image_filepath)
+            if image_id is None:
                 print(f'Failed to upload image: {image_filepath}')
                 break
                 # continue
+            else:
+                print(f'Successfully uploaded image: {image_filepath}')
+
+                print(f'Setting image {image_id} as profile image for pet {pet_id} ...')
+                response_json = set_image_as_profile(access_token, pet_id, image_id)
+                if response_json is None:
+                    print(f'Failed to set image {image_id} as profile image for pet {pet_id}')
+                    break
+                    # continue
+                else:
+                    print(f'Successfully set image {image_id} as profile image for pet {pet_id}')

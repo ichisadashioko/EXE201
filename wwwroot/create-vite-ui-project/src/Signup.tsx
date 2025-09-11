@@ -1,8 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 
 export default function Signup() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+
+    const navigate = useNavigate();
 
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
@@ -18,6 +21,7 @@ export default function Signup() {
         const data = await response.json();
         if (response.ok) {
             alert(data.message);
+            navigate("/login");
         } else {
             alert(data.message || "Signup failed");
         }

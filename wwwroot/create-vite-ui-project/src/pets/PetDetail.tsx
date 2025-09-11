@@ -3,12 +3,7 @@ import { useNavigate, useParams } from "react-router"
 import { api_get_pet_info, api_upload_pet_image, getAccessToken } from "../authentication";
 
 import './PetDetail.css';
-
-interface PetImageInfo {
-    id: string;
-    url: string;
-    created_ts: number;
-}
+import type { PetImageInfo } from "../typing";
 
 export default function PetDetail() {
     const { petId } = useParams<{ petId: string }>();
@@ -171,6 +166,7 @@ export default function PetDetail() {
                             alert("input_upload_image element not found");
                             return;
                         }
+                        input_elem.click();
                     }}>upload images</button>
                 </div>
 

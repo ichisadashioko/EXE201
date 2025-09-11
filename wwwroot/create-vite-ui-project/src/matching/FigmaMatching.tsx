@@ -1,9 +1,42 @@
-import { useNavigate } from "react-router";
-import { api_pets_matching, getAccessToken } from "../authentication";
-import { useEffect, useState } from "react";
-import type { MatchingPetInfo } from "../typing";
+import { useState } from 'react';
 
-function SwipeCard({ profile, onSwipe }: { profile: MatchingPetInfo; onSwipe: (direction: 'left' | 'right') => void }) {
+interface Profile {
+    id: string;
+    name: string;
+    age: number;
+    image: string;
+    location: string;
+    bio: string;
+}
+
+const profiles: Profile[] = [
+    {
+        id: '1',
+        name: 'Emma',
+        age: 26,
+        image: 'https://images.unsplash.com/photo-1520423465871-0866049020b7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwb3J0cmFpdCUyMHlvdW5nJTIwd29tYW4lMjBzbWlsaW5nfGVufDF8fHx8MTc1NzQ4ODAyOHww&ixlib=rb-4.1.0&q=80&w=1080',
+        location: 'New York, NY',
+        bio: 'Love exploring new coffee shops and hiking on weekends. Always up for an adventure!'
+    },
+    {
+        id: '2',
+        name: 'Alex',
+        age: 29,
+        image: 'https://images.unsplash.com/photo-1543132220-e7fef0b974e7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwb3J0cmFpdCUyMHlvdW5nJTIwbWFuJTIwY2FzdWFsfGVufDF8fHx8MTC1NzQ5MjgwMnww&ixlib=rb-4.1.0&q=80&w=1080',
+        location: 'Brooklyn, NY',
+        bio: 'Software engineer who loves cooking and playing guitar. Looking for someone to explore the city with.'
+    },
+    {
+        id: '3',
+        name: 'Sarah',
+        age: 24,
+        image: 'https://images.unsplash.com/photo-1581065178026-390bc4e78dad?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwb3J0cmFpdCUyMHdvbWFuJTIwcHJvZmVzc2lvbmFsfGVufDF8fHx8MTc1NzU2MzE1OHww&ixlib=rb-4.1.0&q=80&w=1080',
+        location: 'Manhattan, NY',
+        bio: 'Travel enthusiast and marketing professional. Always planning my next adventure!'
+    }
+];
+
+function SwipeCard({ profile, onSwipe }: { profile: Profile; onSwipe: (direction: 'left' | 'right') => void }) {
     const [isDragging, setIsDragging] = useState(false);
     const [startX, setStartX] = useState(0);
     const [currentX, setCurrentX] = useState(0);
@@ -51,7 +84,7 @@ function SwipeCard({ profile, onSwipe }: { profile: MatchingPetInfo; onSwipe: (d
             {/* Image Section */}
             <div className="relative h-3/5">
                 <img
-                    src={profile.profile_image_url ?? undefined}
+                    src={profile.image}
                     alt={profile.name}
                     className="w-full h-full object-cover"
                     draggable={false}
@@ -77,8 +110,8 @@ function SwipeCard({ profile, onSwipe }: { profile: MatchingPetInfo; onSwipe: (d
 
                 {/* Basic Info Overlay */}
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 text-white">
-                    <h2>{profile.name}</h2>
-                    <p>📍</p>
+                    <h2>{profile.name}, {profile.age}</h2>
+                    <p>📍 {profile.location}</p>
                 </div>
             </div>
 
@@ -87,7 +120,7 @@ function SwipeCard({ profile, onSwipe }: { profile: MatchingPetInfo; onSwipe: (d
                 <div className="space-y-3">
                     <div>
                         <h3>About {profile.name}</h3>
-                        <p className="text-gray-600">{profile.desc}</p>
+                        <p className="text-gray-600">{profile.bio}</p>
                     </div>
 
                     {isExpanded && (
@@ -110,16 +143,21 @@ function SwipeCard({ profile, onSwipe }: { profile: MatchingPetInfo; onSwipe: (d
         </div>
     );
 }
-export default function Matching() {
-    const navigate = useNavigate();
-    const access_token = getAccessToken();
-    const [pet_info_list, setPetInfoList] = useState<MatchingPetInfo[]>([]);
 
+export default function App() {
     const [currentIndex, setCurrentIndex] = useState(0);
+
     const handleSwipe = async (direction: 'left' | 'right') => {
-        const profile = pet_info_list[currentIndex];
-        console.log(`Swiped ${direction} on pet:`, profile);
-        // TODO call API
+        const profile = profiles[currentIndex];
+
+        // Mock API call
+        console.log(`API Call: ${direction === 'right' ? 'LIKE' : 'PASS'} for ${profile.name}`);
+
+        // You can replace this with actual API calls:
+        // await fetch('/api/swipe', {
+        //   method: 'POST',
+        //   body: JSON.stringify({ profileId: profile.id, action: direction })
+        // });
 
         setCurrentIndex(prev => prev + 1);
     };
@@ -128,43 +166,7 @@ export default function Matching() {
         handleSwipe(direction);
     };
 
-    useEffect(() => {
-        if (access_token == null) {
-            console.log("Access token is null, redirecting to login page");
-            navigate("/login");
-            return;
-        }
-
-        async function fetchMatchingPets() {
-            let retval = await api_pets_matching(
-                access_token!,
-            );
-
-            console.debug(retval);
-
-            if (retval.success) {
-                try {
-                    let pet_list = retval.data.pets;
-                    setPetInfoList(pet_list);
-                    console.log("Fetched matching pets:", pet_list);
-                } catch (error) {
-                    console.error("Error fetching matching pets:");
-                    console.error(error);
-                    alert(`Error fetching matching pets: ${error}`);
-                    return;
-                }
-                // alert("Image uploaded successfully");
-            } else {
-                alert(`Failed to fetch matching pets: ${retval.message}`);
-            }
-        }
-
-        fetchMatchingPets();
-    }, []);
-
-    if (currentIndex >= pet_info_list.length) {
-        // TODO call API to get more pets
-        // return <div>No more pets to show</div>;
+    if (currentIndex >= profiles.length) {
         return (
             <div className="min-h-screen bg-gray-100 flex items-center justify-center">
                 <div className="text-center">
@@ -182,23 +184,18 @@ export default function Matching() {
     }
 
     return (
-        // <div>
-        //     <h1>Matching</h1>
-        //     <pre>{JSON.stringify(pet_info_list, null, 4)}</pre>
-        // </div>
-
         <div className="min-h-screen bg-gray-100">
             <div className="container mx-auto px-4 py-6 h-screen flex flex-col">
                 {/* Header */}
                 <div className="text-center mb-6">
                     <h1 className="text-3xl text-purple-600">SwipeApp</h1>
-                    <p className="text-gray-600">{pet_info_list.length - currentIndex} profiles remaining</p>
+                    <p className="text-gray-600">{profiles.length - currentIndex} profiles remaining</p>
                 </div>
 
                 {/* Card Area */}
                 <div className="flex-1 max-w-md mx-auto w-full relative">
                     {/* Stack Effect - Show next cards behind */}
-                    {pet_info_list.slice(currentIndex, currentIndex + 3).map((profile, index) => (
+                    {profiles.slice(currentIndex, currentIndex + 3).map((profile, index) => (
                         <div
                             key={profile.id}
                             className="absolute inset-0"
@@ -213,12 +210,12 @@ export default function Matching() {
                             ) : (
                                 <div className="absolute inset-4 bg-white rounded-2xl shadow-lg">
                                     <img
-                                        src={profile.profile_image_url ?? undefined}
-                                        alt={profile.profile_image_url ?? "No Image"}
+                                        src={profile.image}
+                                        alt={profile.name}
                                         className="w-full h-3/5 object-cover rounded-t-2xl"
                                     />
                                     <div className="p-4">
-                                        <h3>{profile.name}</h3>
+                                        <h3>{profile.name}, {profile.age}</h3>
                                     </div>
                                 </div>
                             )}
@@ -248,5 +245,5 @@ export default function Matching() {
                 </div>
             </div>
         </div>
-    )
+    );
 }

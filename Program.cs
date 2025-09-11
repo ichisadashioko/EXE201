@@ -83,6 +83,7 @@ if (!string.IsNullOrWhiteSpace(GOOGLE_STORAGE_CLIENT_PROXY))
     {
         Console.WriteLine($"MediaLink: {item.MediaLink}");
         Console.WriteLine($"SelfLink: {item.SelfLink}");
+        break;
     }
 }
 

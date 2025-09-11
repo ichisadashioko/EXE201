@@ -34,7 +34,111 @@ namespace Shioko.Controllers
             this.gcs_config = gcs_config;
         }
 
-        [HttpGet("api/pets/matching")]
+        [HttpPost("/api/pets/{pet_id}/set_profile_image/{image_id}")]
+        [Authorize]
+        public async Task<ActionResult> SetProfileImage([FromRoute] int pet_id, [FromRoute] int image_id)
+        {
+
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new
+                    {
+                        message = "bad request", // TODO replace with error status code
+                    });
+                }
+
+                var user_id_claim = User.FindFirst(CustomClaimTypes.UserId);
+                if (user_id_claim == null)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User ID not found in token", // TODO replace with error status code
+                    });
+                }
+
+                int user_id;
+
+                if (!Int32.TryParse(user_id_claim.Value, out user_id))
+                {
+                    return Unauthorized(new
+                    {
+                        message = "Invalid user ID in token"
+                    });
+                }
+
+                var user = await ctx.Users
+                    .Where(obj => obj.Id == user_id) // TODO add active check
+                    .FirstOrDefaultAsync();
+
+                if (user == null)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User not found"
+                    });
+                }
+
+                //var pet_obj = ctx.Pets.Where(obj => ((obj.PetId == petId) && (obj.UserId == user_id))).FirstOrDefault();
+                var pet_obj = ctx.Pets
+                    .Include(obj => obj.ProfilePicture)
+                    .Include(obj => obj.Pictures)
+                    .Where(obj => (
+                        (obj.PetId == pet_id)
+                    && (obj.UserId == user_id)
+                    && (obj.Active == true)
+                    )).FirstOrDefault();
+
+                if (pet_obj == null)
+                {
+                    return BadRequest(new
+                    {
+                        message = "bad request | this is not your pet. what are you trying to do",
+                    });
+                }
+
+                var picture = pet_obj.Pictures.Where(obj => obj.PetPictureId == image_id).FirstOrDefault();
+                if (picture == null)
+                {
+                    return BadRequest(new
+                    {
+                        message = "bad request | invalid image_id",
+                    });
+                }
+
+                pet_obj.ProfilePictureId = image_id;
+                ctx.Pets.Update(pet_obj);
+                await ctx.SaveChangesAsync();
+
+                return base.Ok(new
+                {
+                    id = pet_obj.PetId,
+                    name = pet_obj.Name,
+                    description = pet_obj.Description,
+                    profile_image_id = pet_obj.ProfilePictureId,
+                    profile_image_url = ((pet_obj.ProfilePicture == null) ? null : pet_obj.ProfilePicture.Url),
+                    images = pet_obj.Pictures.Select(picture => new
+                    {
+                        id = picture.PetPictureId,
+                        url = picture.Url,
+                        created_ts = picture.CreatedAt.ToFileTimeUtc(),
+                    }),
+                    // TODO
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                Console.WriteLine(ex.Message);
+                return StatusCode(500, new
+                {
+                    message = "internal server error",
+                });
+            }
+        }
+
+        [HttpGet("/api/pets/matching")]
         [Authorize]
         public async Task<ActionResult> GetMatchingFeed()
         {
@@ -101,6 +205,7 @@ namespace Shioko.Controllers
                 .Select(pet => new
                 {
                     id = pet.PetId,
+                    name = pet.Name,
                     owner_id = pet.UserId,
                     desc = pet.Description,
                     profile_image_id = pet.ProfilePictureId,
@@ -130,7 +235,7 @@ namespace Shioko.Controllers
             }
         }
 
-        [HttpGet("api/pets/{petId}")]
+        [HttpGet("/api/pets/{petId}")]
         public async Task<ActionResult> GetPetInfo([FromRoute] int petId)
         {
             try
@@ -220,7 +325,7 @@ namespace Shioko.Controllers
             public required string name { get; set; }
         }
 
-        [HttpPost("api/pets/new")]
+        [HttpPost("/api/pets/new")]
         [Authorize]
         public async Task<ActionResult> CreateNewPet([FromBody] new_pet_dto input_obj)
         {
