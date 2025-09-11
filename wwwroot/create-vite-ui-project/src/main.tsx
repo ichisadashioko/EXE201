@@ -8,6 +8,7 @@ import Signup from './Signup.tsx';
 import Home from './users/Home.tsx';
 import NewPet from './pets/NewPet.tsx';
 import PetDetail from './pets/PetDetail.tsx';
+import Matching from './matching/Matching.tsx';
 // import { HOME_ROUTE } from './route_config.ts';
 
 createRoot(document.getElementById('root')!).render(
@@ -21,6 +22,7 @@ createRoot(document.getElementById('root')!).render(
       <Route path="/home" element={<Home />} />
       <Route path="/pets/create" element={<NewPet />} />
       <Route path="/pets/:petId" element={<PetDetail />} />
+      <Route path="/matching" element={<Matching />} />
     </Routes>
   </BrowserRouter>,
 )

@@ -79,7 +79,7 @@ namespace Shioko.Controllers
                     });
                 }
 
-                var retval = await ctx.Pets.Include(pet => pet.ProfilePicture)
+                var retval = ctx.Pets.Include(pet => pet.ProfilePicture)
                 .Include(pet => pet.Pictures)
                 .Where(pet => (
                     (pet.Active == true)
@@ -87,18 +87,22 @@ namespace Shioko.Controllers
                     && (pet.UserId != user_id)
                     // filter past matching records (with current Pet info version - modified time)
                     // TODO write extensive tests for this
-                    && (ctx.MatchingRecords.Any(mr => (
+                    && (!ctx.MatchingRecords.Any(mr => (
                         (mr.UserId == user_id)
                         && (mr.PetId == pet.PetId)
                         && (mr.PetVersionTime >= (pet.ModifiedAt ?? pet.CreatedAt))
                     )))
                 ))
+                //.OrderBy(r => Guid.NewGuid())
+                //.Take(10) // TODO take more to upload to ranking function
+                .Take(20)
+                .AsEnumerable()
                 .OrderBy(r => Guid.NewGuid())
-                .Take(10) // TODO take more to upload to ranking function
                 .Select(pet => new
                 {
                     id = pet.PetId,
                     owner_id = pet.UserId,
+                    desc = pet.Description,
                     profile_image_id = pet.ProfilePictureId,
                     profile_image_url = ((pet.ProfilePicture == null) ? "" : pet.ProfilePicture.Url),
                     images = pet.Pictures.Select(picture => new
@@ -107,7 +111,7 @@ namespace Shioko.Controllers
                         url = picture.Url,
                         created_ts = picture.CreatedAt.ToFileTimeUtc(),
                     }),
-                }).ToListAsync();
+                }).ToList();
 
                 // TODO upload this to ML model/ranking function for better matches
                 return Ok(new

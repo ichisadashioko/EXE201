@@ -33,12 +33,16 @@ export default function Home() {
     return (
         <div>
             <h1>Welcome, TODO user display name</h1>
-            <pre id="tmp_profile_json">{JSON.stringify(tmp_user_profile_json_obj)}</pre>
+            <pre id="tmp_profile_json">{JSON.stringify(tmp_user_profile_json_obj, null, 4)}</pre>
             {/* <div><a href="/"><button>Logout</button></a> </div> */}
             <button onClick={() => {
                 console.log("create new pet clicked");
                 navigate("/pets/create");
             }}>Create New Pet</button>
+            <button onClick={() => {
+                console.log("matching clicked");
+                navigate("/matching");
+            }}>Matching</button>
         </div>
     )
 }

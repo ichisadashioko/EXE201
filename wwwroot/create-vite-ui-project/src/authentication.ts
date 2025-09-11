@@ -17,6 +17,49 @@ export const storeAccessToken = (token: string) => {
   }
 };
 
+export async function api_pets_matching(token: string) {
+  try {
+    const response_obj = await fetch(
+      `/api/pets/matching`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        // body: JSON.stringify({
+        //   name: pet_name,
+        // }),
+      },
+    );
+
+    if (response_obj.ok) {
+      const data = await response_obj.json();
+      return {
+        success: true,
+        status_code: response_obj.status,
+        data: data,// TODO define type
+        message: 'OK',
+      }
+    } else {
+      return {
+        success: false,
+        status_code: response_obj.status,
+        data: await response_obj.text(),
+        message: 'Failed to get pet info',
+      }
+    }
+  } catch (error) {
+    return {
+      success: false,
+      status_code: null,
+      data: null,
+      message: `An error occurred: ${error}`,
+      error: error,
+    }
+  }
+}
+
 export async function api_upload_pet_image(
   token: string,
   pet_id: string,
