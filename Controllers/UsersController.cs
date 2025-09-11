@@ -327,7 +327,7 @@ namespace Shioko.Controllers
                     id = pet.PetId,
                     name = pet.Name,
                     owner_id = pet.UserId,
-                    desc = pet.Description,
+                    description = pet.Description,
                     profile_image_id = pet.ProfilePictureId,
                     profile_image_url = ((pet.ProfilePicture == null) ? "" : pet.ProfilePicture.Url),
                     images = pet.Pictures.Select(picture => new
@@ -699,7 +699,7 @@ namespace Shioko.Controllers
                 //var stream = file.OpenReadStream();
                 //stream.ReadAsync();
 
-                return StatusCode(500, "TODO");
+                //return StatusCode(500, "TODO");
                 //return Ok(new
                 //{
                 //    user = user
@@ -721,24 +721,52 @@ namespace Shioko.Controllers
         [Authorize]
         public async Task<ActionResult> GetCurrentUser()
         {
-            // TODO get user id from claim
-            foreach (var claim in User.Claims)
+            try
             {
-                Console.WriteLine($"Claim: {claim.Type} = {claim.Value}");
-            }
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new
+                    {
+                        message = "bad request",
+                    });
+                }
 
-            // var user_id_claim = User.FindFirst(JwtRegisteredClaimNames.Sub);
-            var user_id_claim = User.FindFirst(CustomClaimTypes.UserId);
-            if (user_id_claim == null)
-            {
-                return Unauthorized(new { message = "User ID not found in token" });
-            }
+                // TODO get user id from claim
+                foreach (var claim in User.Claims)
+                {
+                    Console.WriteLine($"Claim: {claim.Type} = {claim.Value}");
+                }
 
-            if (Int32.TryParse(user_id_claim.Value, out int user_id))
-            {
+                // var user_id_claim = User.FindFirst(JwtRegisteredClaimNames.Sub);
+                var user_id_claim = User.FindFirst(CustomClaimTypes.UserId);
+                if (user_id_claim == null)
+                {
+                    return Unauthorized(new
+                    {
+                        //message = "Invalid user ID in token",
+                        message = "unauthorized",
+                    });
+                    //return Unauthorized(new { message = "User ID not found in token" });
+                }
+                int user_id;
+                if (!Int32.TryParse(user_id_claim.Value, out user_id))
+                {
+                    return Unauthorized(new
+                    {
+                        //message = "Invalid user ID in token",
+                        message = "unauthorized",
+                    });
+                }
+
                 var user = await ctx.Users
+                    //.Include(obj => obj.Pets)
+                    //.ThenInclude(obj => obj.Pictures)
                     .Include(obj => obj.Pets)
-                    .Where(obj => obj.Id == user_id) // TODO add active check
+                    .ThenInclude(obj => obj.ProfilePicture)
+                    .Where(obj => (
+                        (obj.Id == user_id)
+                        && (obj.Active == true)
+                    )) // TODO add active check
                     .Select(obj => new
                     {
                         id = obj.Id,
@@ -749,6 +777,8 @@ namespace Shioko.Controllers
                             id = pet.PetId,
                             name = pet.Name,
                             description = pet.Description,
+                            profile_image_id = pet.ProfilePictureId,
+                            profile_image_url = ((pet.ProfilePicture == null) ? null : pet.ProfilePicture.Url),
                             //species = pet.Species,
                             //breed = pet.Breed,
                             //age = pet.Age,
@@ -762,20 +792,23 @@ namespace Shioko.Controllers
                 {
                     return NotFound(new
                     {
-                        message = "User not found"
+                        message = "User not found",
                     });
                 }
 
                 return Ok(new
                 {
-                    user = user
+                    message = "OK",
+                    user = user,
                 });
             }
-            else
+            catch (Exception ex)
             {
-                return Unauthorized(new
+                Console.WriteLine(ex);
+                Console.WriteLine(ex.Message);
+                return StatusCode(500, new
                 {
-                    message = "Invalid user ID in token"
+                    message = "internal server error",
                 });
             }
         }

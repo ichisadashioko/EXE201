@@ -9,7 +9,7 @@ export interface MatchingPetInfo {
     id: number,
     name: string,
     owner_id: number,
-    desc: string | null,
+    description: string | null,
     profile_image_id: number | null,
     profile_image_url: string | null,
     images: [PetImageInfo],

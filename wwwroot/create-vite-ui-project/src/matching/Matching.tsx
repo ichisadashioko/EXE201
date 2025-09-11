@@ -87,7 +87,7 @@ function SwipeCard({ profile, onSwipe }: { profile: MatchingPetInfo; onSwipe: (d
                 <div className="space-y-3">
                     <div>
                         <h3>About {profile.name}</h3>
-                        <p className="text-gray-600">{profile.desc}</p>
+                        <p className="text-gray-600">{profile.description}</p>
                     </div>
 
                     {isExpanded && (
