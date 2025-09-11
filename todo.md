@@ -7,7 +7,7 @@
     - [ ] user's pet page
     - [ ] user's pet CRUD
     - [ ] user's chat home/list
-
+    - [ ] `import './style.css'` is being applied globally instead of being scoped to specified component
 - backend
     - [ ] TODO
     - [ ] pets image upload endpoint
