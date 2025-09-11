@@ -73,7 +73,7 @@ namespace Shioko.Models
     public class MatchingRecord
     {
         [Key]
-        public required int Id { get; set; }
+        public int Id { get; set; }
         [ForeignKey("User")]
         public required int UserId { get; set; }
         public virtual User User { get; set; }
@@ -82,10 +82,10 @@ namespace Shioko.Models
         public virtual Pet Pet { get; set; }
         // set to Pet's modified time or creation time of modified time is null
         public DateTime PetVersionTime { get; set; } // TODO implement more robust snapshot data model
-        public string SnapshotJsonData { get; set; } // json string of pet data at the time of matching
-        public int Rating { get; set; } // -1: dislike, 0: neutral, 1: like
+        public required string SnapshotJsonData { get; set; } // json string of pet data at the time of matching
+        public required int Rating { get; set; } // -1: dislike, 0: neutral, 1: like
 
-        public DateTime CreatedAt { get; set; }
+        public required DateTime CreatedAt { get; set; }
         // for swiping back and reconsidering the rating choice
         public DateTime? ModifiedAt { get; set; }
     }

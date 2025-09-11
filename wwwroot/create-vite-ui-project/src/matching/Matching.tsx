@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router";
-import { api_pets_matching, getAccessToken } from "../authentication";
+import { api_matching_record_store_rating, api_pets_matching, getAccessToken } from "../authentication";
 import { useEffect, useState } from "react";
 import type { MatchingPetInfo } from "../typing";
 
@@ -119,7 +119,36 @@ export default function Matching() {
     const handleSwipe = async (direction: 'left' | 'right') => {
         const profile = pet_info_list[currentIndex];
         console.log(`Swiped ${direction} on pet:`, profile);
+        // TODO implement undo feature
+
+        if (access_token == null) {
+            console.error("Access token is null, cannot store matching record");
+            navigate("/login");
+            return;
+        }
+
+        if (profile == null) {
+            console.error("Profile is null, cannot store matching record");
+            return;
+        }
+
         // TODO call API
+        api_matching_record_store_rating(
+            access_token!,
+            profile.id,
+            direction === 'left' ? -1 : 1,
+        ).then((retval) => {
+            console.debug(retval);
+            if (retval.success) {
+                console.log("Stored matching record successfully");
+            } else {
+                alert(`Failed to store matching record: ${retval.message}`);
+            }
+        }).catch((error) => {
+            console.error("Error storing matching record:");
+            console.error(error);
+            alert(`Error storing matching record: ${error}`);
+        });
 
         setCurrentIndex(prev => prev + 1);
     };

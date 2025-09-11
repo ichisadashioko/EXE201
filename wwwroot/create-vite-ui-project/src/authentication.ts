@@ -17,6 +17,54 @@ export const storeAccessToken = (token: string) => {
   }
 };
 
+export async function api_matching_record_store_rating(
+  token: string,
+  pet_id: number,
+  rating: number,
+) {
+  try {
+    const response_obj = await fetch(
+      `/api/matching-records`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          pet_id: pet_id,
+          rating: rating,
+        }),
+      },
+    );
+
+    if (response_obj.ok) {
+      const data = await response_obj.json();
+      return {
+        success: true,
+        status_code: response_obj.status,
+        data: data,// TODO define type
+        message: 'OK',
+      }
+    } else {
+      return {
+        success: false,
+        status_code: response_obj.status,
+        data: await response_obj.text(),
+        message: 'Failed to store matching rating',
+      }
+    }
+  } catch (error) {
+    return {
+      success: false,
+      status_code: null,
+      data: null,
+      message: `An error occurred: ${error}`,
+      error: error,
+    }
+  }
+}
+
 export async function api_pets_matching(token: string) {
   try {
     const response_obj = await fetch(

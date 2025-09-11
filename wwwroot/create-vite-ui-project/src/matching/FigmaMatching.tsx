@@ -144,7 +144,7 @@ function SwipeCard({ profile, onSwipe }: { profile: Profile; onSwipe: (direction
     );
 }
 
-export default function App() {
+export default function FigmaMatchingApp() {
     const [currentIndex, setCurrentIndex] = useState(0);
 
     const handleSwipe = async (direction: 'left' | 'right') => {

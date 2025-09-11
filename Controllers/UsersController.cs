@@ -34,6 +34,126 @@ namespace Shioko.Controllers
             this.gcs_config = gcs_config;
         }
 
+        public class matching_rating_dto
+        {
+            public required int pet_id { get; set; }
+            public required int rating { get; set; } // -1: dislike, 0: neutral, 1: like
+        }
+
+        [HttpPost("/api/matching-records")]
+        [Authorize]
+        public async Task<ActionResult> MatchingStoreRating([FromBody] matching_rating_dto input_obj)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new
+                    {
+                        message = "bad request", // TODO replace with error status code
+                    });
+                }
+
+                int pet_id = input_obj.pet_id;
+                int rating = input_obj.rating;
+
+                var user_id_claim = User.FindFirst(CustomClaimTypes.UserId);
+                if (user_id_claim == null)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User ID not found in token", // TODO replace with error status code
+                    });
+                }
+
+                int user_id;
+
+                if (!Int32.TryParse(user_id_claim.Value, out user_id))
+                {
+                    return Unauthorized(new
+                    {
+                        message = "Invalid user ID in token"
+                    });
+                }
+
+                var user = await ctx.Users
+                    .Where(obj => obj.Id == user_id) // TODO add active check
+                    .FirstOrDefaultAsync();
+
+                if (user == null)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User not found"
+                    });
+                }
+
+                //var pet_obj = ctx.Pets.Where(obj => ((obj.PetId == petId) && (obj.UserId == user_id))).FirstOrDefault();
+                var pet_obj = ctx.Pets
+                    .Where(obj => (
+                        (obj.PetId == pet_id)
+                    && (obj.UserId != user_id)
+                    && (obj.Active == true)
+                    )).FirstOrDefault();
+
+                if (pet_obj == null)
+                {
+                    return BadRequest(new
+                    {
+                        message = "bad request",
+                    });
+                }
+
+                var current_pet_version = pet_obj.ModifiedAt ?? pet_obj.CreatedAt;
+
+                var existing_matching_record = ctx.MatchingRecords.Where(obj => (
+                    (obj.UserId == user_id)
+                    && (obj.PetId == pet_id)
+                    && (obj.PetVersionTime == current_pet_version)
+                )).FirstOrDefault();
+
+                if (existing_matching_record == null)
+                {
+                    MatchingRecord record = new MatchingRecord()
+                    {
+                        UserId = user_id,
+                        PetId = pet_id,
+                        PetVersionTime = current_pet_version,
+                        SnapshotJsonData = "TODO - for training ML model or past context",
+                        CreatedAt = DateTime.UtcNow,
+                        Rating = rating,
+                    };
+
+                    ctx.MatchingRecords.Add(record);
+                    await ctx.SaveChangesAsync();
+                    existing_matching_record = record;
+                }
+                else
+                {
+                    existing_matching_record.ModifiedAt = DateTime.Now;
+                    existing_matching_record.Rating = rating;
+                    ctx.MatchingRecords.Update(existing_matching_record);
+                    await ctx.SaveChangesAsync();
+                }
+
+                return Ok(new
+                {
+                    message = "OK",
+                    id = existing_matching_record.Id,
+                    // TODO add more info
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                Console.WriteLine(ex.Message);
+                return StatusCode(500, new
+                {
+                    message = "internal server error",
+                });
+            }
+        }
+
         [HttpPost("/api/pets/{pet_id}/set_profile_image/{image_id}")]
         [Authorize]
         public async Task<ActionResult> SetProfileImage([FromRoute] int pet_id, [FromRoute] int image_id)
@@ -111,7 +231,7 @@ namespace Shioko.Controllers
                 ctx.Pets.Update(pet_obj);
                 await ctx.SaveChangesAsync();
 
-                return base.Ok(new
+                return Ok(new
                 {
                     id = pet_obj.PetId,
                     name = pet_obj.Name,
