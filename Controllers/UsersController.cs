@@ -34,6 +34,98 @@ namespace Shioko.Controllers
             this.gcs_config = gcs_config;
         }
 
+        [HttpGet("api/pets/matching")]
+        [Authorize]
+        public async Task<ActionResult> GetMatchingFeed()
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new
+                    {
+                        message = "bad request", // TODO replace with error status code
+                    });
+                }
+
+                var user_id_claim = User.FindFirst(CustomClaimTypes.UserId);
+                if (user_id_claim == null)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User ID not found in token", // TODO replace with error status code
+                    });
+                }
+
+                int user_id;
+
+                if (!Int32.TryParse(user_id_claim.Value, out user_id))
+                {
+                    return Unauthorized(new
+                    {
+                        message = "Invalid user ID in token"
+                    });
+                }
+
+                var user = await ctx.Users
+                    .Where(obj => obj.Id == user_id) // TODO add active check
+                    .FirstOrDefaultAsync();
+
+                if (user == null)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User not found"
+                    });
+                }
+
+                var retval = await ctx.Pets.Include(pet => pet.ProfilePicture)
+                .Include(pet => pet.Pictures)
+                .Where(pet => (
+                    (pet.Active == true)
+                    && (pet.UserId != user_id)
+                    && (pet.UserId != user_id)
+                    // filter past matching records (with current Pet info version - modified time)
+                    // TODO write extensive tests for this
+                    && (ctx.MatchingRecords.Any(mr => (
+                        (mr.UserId == user_id)
+                        && (mr.PetId == pet.PetId)
+                        && (mr.PetVersionTime >= (pet.ModifiedAt ?? pet.CreatedAt))
+                    )))
+                ))
+                .OrderBy(r => Guid.NewGuid())
+                .Take(10) // TODO take more to upload to ranking function
+                .Select(pet => new
+                {
+                    id = pet.PetId,
+                    owner_id = pet.UserId,
+                    profile_image_id = pet.ProfilePictureId,
+                    profile_image_url = ((pet.ProfilePicture == null) ? "" : pet.ProfilePicture.Url),
+                    images = pet.Pictures.Select(picture => new
+                    {
+                        id = picture.PetPictureId,
+                        url = picture.Url,
+                        created_ts = picture.CreatedAt.ToFileTimeUtc(),
+                    }),
+                }).ToListAsync();
+
+                // TODO upload this to ML model/ranking function for better matches
+                return Ok(new
+                {
+                    pets = retval,
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                Console.WriteLine(ex.Message);
+                return StatusCode(500, new
+                {
+                    message = "internal server error",
+                });
+            }
+        }
+
         [HttpGet("api/pets/{petId}")]
         public async Task<ActionResult> GetPetInfo([FromRoute] int petId)
         {

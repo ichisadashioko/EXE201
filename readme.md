@@ -1,3 +1,14 @@
+# entity framework
+
+### add new migration changes (code change/schema change)
+
+```sh
+# dotnet-ef migrations add 
+# VS Package Manager Console
+Add-Migration AddMatchingRecord
+Update-Database
+```
+
 ## for ubuntu
 
 ```sh

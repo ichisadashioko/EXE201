@@ -14,6 +14,7 @@ namespace Shioko.Models
         public virtual ICollection<Pet> Pets { get; set; }
         public virtual ICollection<AuthProviders> AuthProviders { get; set; }
         public DateTime CreatedAt { get; set; }
+        public bool Active { get; set; } = true;
     }
 
     public static class PROVIDER_TYPE
@@ -47,6 +48,8 @@ namespace Shioko.Models
         public int PetId { get; set; }
         public virtual Pet Pet { get; set; }
         public DateTime CreatedAt { get; set; }
+        public bool Active { get; set; } = true;
+        public bool Removed { get; set; } = false;
     }
 
     public class Pet
@@ -64,7 +67,36 @@ namespace Shioko.Models
         public virtual User User { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? ModifiedAt { get; set; }
+        public bool Active { get; set; } = true;
     }
+
+    public class MatchingRecord
+    {
+        [Key]
+        public required int Id { get; set; }
+        [ForeignKey("User")]
+        public required int UserId { get; set; }
+        public virtual User User { get; set; }
+        [ForeignKey("Pet")]
+        public int PetId { get; set; }
+        public virtual Pet Pet { get; set; }
+        // set to Pet's modified time or creation time of modified time is null
+        public DateTime PetVersionTime { get; set; } // TODO implement more robust snapshot data model
+
+        public DateTime CreatedAt { get; set; }
+        // for swiping back and reconsidering the rating choice
+        public DateTime? ModifiedAt { get; set; }
+    }
+
+    //public class PetHistory
+    //{
+    //    [Key]
+    //    public required int Id { get; set; }
+    //    [ForeignKey("Pet")]
+    //    public required int PetId { get; set; }
+    //    public virtual Pet Pet { get; set; }
+    //    public DateTime CreatedAt { get; set; }
+    //}
 
     public class AppDbContext : DbContext
     {
@@ -73,6 +105,9 @@ namespace Shioko.Models
         {
             if (!optionsBuilder.IsConfigured)
             {
+                // TODO create database if not exist
+                // TODO update migration schema
+                // TODO update database schema while keeping old data
                 optionsBuilder.UseSqlite("Data Source=shioko.sqlite");
                 // for sql server
                 // IConfigurationRoot configuration = new ConfigurationBuilder()
@@ -87,6 +122,7 @@ namespace Shioko.Models
         public DbSet<AuthProviders> AuthProviders { get; set; }
         public DbSet<Pet> Pets { get; set; }
         public DbSet<PetPicture> PetPictures { get; set; }
+        public DbSet<MatchingRecord> MatchingRecords { get; set; }
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
