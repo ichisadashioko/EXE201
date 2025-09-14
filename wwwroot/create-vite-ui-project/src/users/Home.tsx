@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
-import api_get_user_profile, { getAccessToken } from "../authentication";
+import { api_get_user_profile, api_get_matches, getAccessToken } from "../authentication";
 import { useNavigate } from "react-router";
+import UsersMatchListView from "../matching/UsersMatchListView";
 
 
 // Define the interface for a single Pet
@@ -16,6 +17,7 @@ interface Pet {
 // Define the interface for the User Profile, which contains an array of Pets
 interface UserProfile {
     id: number;
+    name: string | null;
     is_guest: boolean;
     created_at: string; // Dates are typically strings in JSON
     pets: Pet[];
@@ -57,12 +59,19 @@ function PetList({ pets }: { pets: Pet[] }) {
     return (
         <div>
             <h2>Your Pets</h2>
-            <ul>
+            <ul style={{
+                border: '1px solid #f00',
+            }}>
                 {pets.map(pet => (
                     <li
                         key={pet.id}
                         onClick={() => navigate(`/pets/${pet.id}`)}
-                        style={{ cursor: 'pointer', marginBottom: '10px', listStyle: 'none' }}
+                        style={{
+                            cursor: 'pointer',
+                            marginBottom: '10px',
+                            listStyle: 'none',
+                            border: '1px solid #0f0',
+                        }}
                     >
                         {pet.profile_image_url && (
                             <img
@@ -87,6 +96,7 @@ export default function Home() {
     const [user_profile, set_user_profile] = useState<UserProfile | null>(null);
     const navigate = useNavigate();
     const access_token = getAccessToken();
+    const [matches, set_matches] = useState<any[]>([]);
 
     useEffect(() => {
         if (access_token == null) {
@@ -107,11 +117,26 @@ export default function Home() {
                     console.error("Failed to fetch user profile:", user_profile_response.message);
                     alert(`Failed to fetch user profile: ${user_profile_response.message}`);
                     navigate("/login");
+                    return;
                 }
             } catch (error) {
                 console.error("An error occurred while fetching user profile:", error);
                 alert("An error occurred. Please try logging in again.");
                 navigate("/login");
+                return;
+            }
+
+            try {
+                const matches_response = await api_get_matches(access_token);
+                console.debug(matches_response);
+                if (matches_response.success) {
+                    // Handle matches data if needed
+                    set_matches(matches_response.data.matches);
+                } else {
+                    console.error("Failed to fetch matches:", matches_response.message);
+                }
+            } catch (error) {
+                console.error(error);
             }
         };
 
@@ -137,6 +162,19 @@ export default function Home() {
                 console.log("matching clicked");
                 navigate("/matching");
             }}>Matching</button>
+
+            {user_profile ? (
+                <div id="match_list_container">
+                    <UsersMatchListView
+                        me={{
+                            id: user_profile.id,
+                            name: user_profile.name || null,
+                        }}
+                        matches={matches}
+                    />
+                </div>
+
+            ) : null}
         </div>
     )
 }

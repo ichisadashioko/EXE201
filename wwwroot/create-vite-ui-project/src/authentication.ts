@@ -247,7 +247,47 @@ export async function api_create_new_pet(token: string, pet_name: string) {
   }
 }
 
-export default async function api_get_user_profile(token: string) {
+export async function api_get_matches(token: string) {
+  try {
+    const response_obj = await fetch(
+      '/api/matches',
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (response_obj.ok) {
+      const data = await response_obj.json();
+      return {
+        success: true,
+        status_code: response_obj.status,
+        data: data,// TODO define type
+        message: 'User profile retrieved successfully',
+      }
+    } else {
+      return {
+        success: false,
+        status_code: response_obj.status,
+        data: await response_obj.text(),
+        message: 'Failed to retrieve user profile',
+      }
+    }
+  } catch (error) {
+    return {
+      success: false,
+      status_code: null,
+      data: null,
+      message: `An error occurred: ${error}`,
+      error: error,
+    }
+  }
+}
+
+export async function api_get_user_profile(token: string) {
   try {
     const response_obj = await fetch(
       '/api/users/me',

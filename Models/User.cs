@@ -15,6 +15,7 @@ namespace Shioko.Models
         public virtual ICollection<AuthProviders> AuthProviders { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool Active { get; set; } = true;
+        public virtual ICollection<ChatMessage> ChatMessages { get; set; }
     }
 
     public static class PROVIDER_TYPE
@@ -90,6 +91,33 @@ namespace Shioko.Models
         public DateTime? ModifiedAt { get; set; }
     }
 
+    public class ChatThread
+    {
+        [Key]
+        public int Id { get; set; }
+        [ForeignKey("User")]
+        public required int UserAId { get; set; }
+        public virtual User UserA { get; set; }
+        [ForeignKey("User")]
+        public required int UserBId { get; set; }
+        public virtual User UserB { get; set; }
+        public virtual ICollection<ChatMessage> Messages { get; set; }
+    }
+
+    public class ChatMessage
+    {
+        [Key]
+        public int Id { get; set; }
+        [ForeignKey("ChatThread")]
+        public required int ChatThreadId { get; set; }
+        [ForeignKey("User")]
+        public required int SenderUserId { get; set; }
+        public virtual User SenderUser { get; set; }
+        public DateTime? ReadAt { get; set; } = null;
+        public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public required string Content { get; set; }
+    }
+
     //public class PetHistory
     //{
     //    [Key]
@@ -125,6 +153,7 @@ namespace Shioko.Models
         public DbSet<Pet> Pets { get; set; }
         public DbSet<PetPicture> PetPictures { get; set; }
         public DbSet<MatchingRecord> MatchingRecords { get; set; }
+        public DbSet<ChatMessage> ChatMessages { get; set; }
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

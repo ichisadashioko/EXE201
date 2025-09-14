@@ -10,6 +10,9 @@ Update-Database
 
 Add-Migration MatchingRecordRating
 Update-Database
+
+Add-Migration ChatSchema
+Update-Database
 ```
 
 ## for ubuntu

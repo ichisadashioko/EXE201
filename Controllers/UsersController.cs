@@ -355,6 +355,13 @@ namespace Shioko.Controllers
             }
         }
 
+        [HttpGet("/api/chats")]
+        [Authorize]
+        public async Task<ActionResult> GetChatThreadList()
+        {
+            return Ok();
+        }
+
         [HttpGet("/api/pets/{petId}")]
         [Authorize]
         public async Task<ActionResult> GetPetInfo([FromRoute] int petId)
@@ -725,6 +732,185 @@ namespace Shioko.Controllers
             }
         }
 
+        [HttpGet("/api/matches")]
+        [Authorize]
+        public async Task<ActionResult> GetMatches()
+        {
+            try
+            {
+                var user_id_claim = User.FindFirst(CustomClaimTypes.UserId);
+                if (user_id_claim == null || !Int32.TryParse(user_id_claim.Value, out int me_id))
+                {
+                    return Unauthorized(new { message = "Invalid user ID in token" });
+                }
+
+                var me = await ctx.Users.FindAsync(me_id);
+                if (me == null)
+                {
+                    return Unauthorized(new { message = "User not found" });
+                }
+
+                // Get IDs of all pets owned by the current user
+                var my_pet_ids = await ctx.Pets
+                    .Where(p => p.UserId == me_id)
+                    .Select(p => p.PetId)
+                    .ToListAsync();
+
+                // Get all "like" records that are either made by the current user or made on their pets.
+                // This single query fetches all data needed to calculate matches.
+                var all_relevant_likes = await ctx.MatchingRecords
+                    .Include(r => r.Pet).ThenInclude(p => p.ProfilePicture)
+                    .Include(r => r.User)
+                    .Where(r => r.Rating == 1 && (r.UserId == me_id || my_pet_ids.Contains(r.PetId)))
+                    .ToListAsync();
+
+                // Separate the fetched records into likes made by the user and likes they received.
+                var my_likes = all_relevant_likes.Where(r => r.UserId == me_id).ToList();
+                var likes_on_my_pets = all_relevant_likes.Where(r => my_pet_ids.Contains(r.PetId)).ToList();
+
+                // Group records by the other user involved.
+                var other_users_i_liked = my_likes.GroupBy(r => r.Pet.UserId);
+                var users_who_liked_me = likes_on_my_pets.GroupBy(r => r.UserId);
+
+                // A match occurs with users who are in both groups (I liked them AND they liked me).
+                var matched_user_ids = other_users_i_liked.Select(g => g.Key)
+                    .Intersect(users_who_liked_me.Select(g => g.Key));
+
+                var matches_response = new List<object>();
+
+                foreach (var other_user_id in matched_user_ids)
+                {
+                    var other_user = await ctx.Users.FindAsync(other_user_id);
+                    if (other_user == null) continue;
+
+                    var my_likes_on_their_pets_records = my_likes.Where(r => r.Pet.UserId == other_user_id);
+                    var their_likes_on_my_pets_records = likes_on_my_pets.Where(r => r.UserId == other_user_id);
+
+                    // The match is considered created at the time of the most recent "like" between the two users.
+                    var creation_time = my_likes_on_their_pets_records
+                        .Concat(their_likes_on_my_pets_records)
+                        .Max(r => r.CreatedAt);
+
+                    matches_response.Add(new
+                    {
+                        user_a = new { id = me.Id, name = me.DisplayName },
+                        user_b = new { id = other_user.Id, name = other_user.DisplayName },
+                        user_a_liked_pets = my_likes_on_their_pets_records.Select(r => new
+                        {
+                            id = r.Pet.PetId,
+                            name = r.Pet.Name,
+                            owner_id = r.Pet.UserId,
+                            description = r.Pet.Description,
+                            profile_image_id = r.Pet.ProfilePictureId,
+                            profile_image_url = r.Pet.ProfilePicture?.Url,
+                        }),
+                        user_b_liked_pets = their_likes_on_my_pets_records.Select(r => new
+                        {
+                            id = r.Pet.PetId,
+                            name = r.Pet.Name,
+                            owner_id = r.Pet.UserId,
+                            description = r.Pet.Description,
+                            profile_image_id = r.Pet.ProfilePictureId,
+                            profile_image_url = r.Pet.ProfilePicture?.Url,
+                        }),
+                        creation_time = ((DateTimeOffset)creation_time).ToUnixTimeSeconds(),
+                    });
+                }
+
+                return Ok(new
+                {
+                    matches = matches_response
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                Console.WriteLine(ex.Message);
+                return StatusCode(500, new
+                {
+                    message = "internal server error",
+                });
+            }
+        }
+        //public object? FindAllMatches(int user_id)
+        //{
+        //    var me = ctx.Users.Where(obj => (
+        //        (obj.Id == user_id)
+        //        && (obj.Active == true)
+        //    )).FirstOrDefault();
+
+        //    if (me == null)
+        //    {
+        //        return null;
+        //    }
+        //    var my_pet_ids = ctx.Pets.Where(p =>
+        //        (p.UserId == user_id)
+        //        && (p.Active == true)
+        //    )
+        //        .Select(p => p.PetId)
+        //        .ToList();
+
+        //    var all_relevant_likes = ctx.MatchingRecords
+        //        .Include(r => r.Pet).ThenInclude(p => p.ProfilePicture)
+        //        .Include(r => r.User)
+        //        .Where(r => (
+        //            (r.Rating > 0)
+        //            && ((r.UserId == user_id) || (my_pet_ids.Contains(r.PetId))
+        //        ))).ToList();
+
+        //    var my_likes = all_relevant_likes.Where(r => r.UserId == user_id).ToList();
+        //    var likes_on_my_pets = all_relevant_likes.Where(r => my_pet_ids.Contains(r.PetId)).ToList();
+
+
+        //    var other_users_i_liked = my_likes.GroupBy(r => r.Pet.UserId);
+        //    var users_who_liked_me = likes_on_my_pets.GroupBy(r => r.UserId);
+
+        //    var matched_user_ids = other_users_i_liked.Select(g => g.Key)
+        //        .Intersect(users_who_liked_me.Select(g => g.Key));
+
+        //    var matches_response = new List<object>();
+
+        //    foreach (var other_user_id in matched_user_ids)
+        //    {
+        //        var other_user = ctx.Users.Find(other_user_id);
+        //        if (other_user == null) { continue; }
+
+        //        var my_likes_on_their_pets_records = my_likes.Where(r => r.Pet.UserId == other_user_id);
+        //        var their_likes_on_my_pets_records = likes_on_my_pets.Where(r => r.UserId == other_user_id);
+
+        //        var creation_time = my_likes_on_their_pets_records.Concat(their_likes_on_my_pets_records)
+        //            .Max(r => r.CreatedAt);
+
+
+        //        matches_response.Add(new
+        //        {
+        //            user_a = new { id = me.Id, name = me.DisplayName },
+        //            user_b = new { id = other_user.Id, name = other_user.DisplayName },
+        //            user_a_liked_pets = my_likes_on_their_pets_records.Select(r => new
+        //            {
+        //                id = r.Pet.PetId,
+        //                name = r.Pet.Name,
+        //                owner_id = r.Pet.UserId,
+        //                description = r.Pet.Description,
+        //                profile_image_id = r.Pet.ProfilePictureId,
+        //                profile_image_url = r.Pet.ProfilePicture?.Url,
+        //            }),
+        //            user_b_liked_pets = their_likes_on_my_pets_records.Select(r => new
+        //            {
+        //                id = r.Pet.PetId,
+        //                name = r.Pet.Name,
+        //                owner_id = r.Pet.UserId,
+        //                description = r.Pet.Description,
+        //                profile_image_id = r.Pet.ProfilePictureId,
+        //                profile_image_url = r.Pet.ProfilePicture?.Url,
+        //            }),
+        //            creation_time = ((DateTimeOffset)creation_time).ToUnixTimeSeconds(),
+        //        });
+        //    }
+
+        //    return matches_response;
+        //}
+
         [HttpGet("/api/users/me")]
         [Authorize]
         public async Task<ActionResult> GetCurrentUser()
@@ -778,6 +964,7 @@ namespace Shioko.Controllers
                     .Select(obj => new
                     {
                         id = obj.Id,
+                        name = obj.DisplayName,
                         is_guest = obj.IsGuest,
                         created_at = obj.CreatedAt,
                         pets = obj.Pets.Select(pet => new
