@@ -61,3 +61,10 @@ scp "C:\artifact" user@hostname:/root/data
 3. modify `appsettings.json` to config `0.0.0.0:443` and SSL certificate location
 4. TODO change JWT secret
 5. TODO make database backup/migration
+
+# update database schema
+
+```sh
+# not usable with SQLite
+dotnet-ef migrations script --output "publish/migration_update.sql" --idempotent
+```

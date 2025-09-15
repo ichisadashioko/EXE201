@@ -9,6 +9,7 @@ using Google.Cloud.Storage.V1;
 using System.Net;
 using Google.Apis.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 
 Log.Logger = new LoggerConfiguration().MinimumLevel.Debug().WriteTo.Console()
     .WriteTo.File("logs/tinder_logs.txt", rollingInterval: RollingInterval.Day)
@@ -131,6 +132,23 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddSingleton<TokenService>();
 
 var app = builder.Build();
+
+// setup database
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<AppDbContext>();
+        context.Database.Migrate();
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while migrating the database.");
+        throw;
+    }
+}
 
 app.UseHttpLogging();
 
