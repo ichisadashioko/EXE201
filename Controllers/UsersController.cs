@@ -35,6 +35,107 @@ namespace Shioko.Controllers
             this.gcs_config = gcs_config;
         }
 
+        public class users_update_display_name_dto
+        {
+            public required string display_name { get; set; }
+        }
+
+        [HttpPost("/api/users/name")]
+        [Authorize]
+        public async Task<ActionResult> UpdateDisplayName([FromBody] users_update_display_name_dto input_obj)
+        {
+            var userIdClaim = User.FindFirst(CustomClaimTypes.UserId);
+            if (userIdClaim == null || !Int32.TryParse(userIdClaim.Value, out int userId))
+            {
+                return Unauthorized();
+            }
+
+            string? new_display_name = input_obj?.display_name;
+            if (string.IsNullOrWhiteSpace(new_display_name) || new_display_name.Length > 100)
+            {
+                return BadRequest(new { message = "Invalid display name" });
+            }
+
+            var user = await ctx.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return Unauthorized();
+            }
+
+            user.DisplayName = new_display_name;
+            ctx.Users.Update(user);
+            await ctx.SaveChangesAsync();
+
+            return Ok(new { message = "Display name updated successfully" });
+        }
+
+        [HttpPost("/api/chat/initiate/{other_user_id}")]
+        [Authorize]
+        public async Task<ActionResult> InitiateChat([FromRoute] int other_user_id)
+        {
+            var userIdClaim = User.FindFirst(CustomClaimTypes.UserId);
+            if (userIdClaim == null || !Int32.TryParse(userIdClaim.Value, out int meId))
+            {
+                return Unauthorized();
+            }
+
+            // TODO check if other user exists and is active
+            var otherUser = await ctx.Users.FindAsync(other_user_id);
+            if (otherUser == null)
+            {
+                return BadRequest(new { message = "The user you are trying to chat with does not exist." });
+            }
+
+            // Find existing chat thread
+            var thread = await ctx.ChatThreads.FirstOrDefaultAsync(ct =>
+                (ct.UserAId == meId && ct.UserBId == other_user_id) ||
+                (ct.UserAId == other_user_id && ct.UserBId == meId));
+
+            if (thread == null)
+            {
+                // Create a new thread if one doesn't exist
+                thread = new ChatThread { UserAId = meId, UserBId = other_user_id };
+                ctx.ChatThreads.Add(thread);
+                await ctx.SaveChangesAsync();
+            }
+
+            return Ok(new { chatThreadId = thread.Id });
+        }
+
+        // endpoint to get the message history for a chat thread
+        [Authorize]
+        [HttpGet("/api/chat/{thread_id}/messages")]
+        public async Task<ActionResult> GetChatMessages([FromRoute] int thread_id)
+        {
+            var userIdClaim = User.FindFirst(CustomClaimTypes.UserId);
+            if (userIdClaim == null || !Int32.TryParse(userIdClaim.Value, out int meId))
+            {
+                return Unauthorized();
+            }
+
+            var thread = await ctx.ChatThreads
+                .Include(ct => ct.Messages)
+                .FirstOrDefaultAsync(ct => ct.Id == thread_id);
+
+            if (thread == null || (thread.UserAId != meId && thread.UserBId != meId))
+            {
+                return NotFound(new { message = "Chat thread not found or access denied." });
+            }
+
+            var messages = thread.Messages
+                .OrderBy(m => m.CreatedAt)
+                .Select(m => new
+                {
+                    id = m.Id,
+                    senderUserId = m.SenderUserId,
+                    content = m.Content,
+                    timestamp = ((DateTimeOffset)m.CreatedAt).ToUnixTimeSeconds(),
+                    //Timestamp = (m.CreatedAt).ToUnixTimeSeconds(),
+                });
+
+            return Ok(new { messages });
+        }
+
         public class matching_rating_dto
         {
             public required int pet_id { get; set; }

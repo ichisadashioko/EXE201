@@ -154,6 +154,7 @@ namespace Shioko.Models
         public DbSet<PetPicture> PetPictures { get; set; }
         public DbSet<MatchingRecord> MatchingRecords { get; set; }
         public DbSet<ChatMessage> ChatMessages { get; set; }
+        public DbSet<ChatThread> ChatThreads { get; set; }
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

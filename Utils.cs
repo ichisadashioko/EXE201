@@ -14,6 +14,10 @@ namespace Shioko
                 return true;
             }
 
+            if (request_path.StartsWithSegments("/chathub"))
+            {
+                return false;
+            }
             if (request_path.StartsWithSegments("/api"))
             {
                 return false;

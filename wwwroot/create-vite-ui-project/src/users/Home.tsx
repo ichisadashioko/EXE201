@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { api_get_user_profile, api_get_matches, getAccessToken } from "../authentication";
+import { api_get_user_profile, api_get_matches, getAccessToken, api_update_display_name } from "../authentication";
 import { useNavigate } from "react-router";
 import UsersMatchListView from "../matching/UsersMatchListView";
 
@@ -97,6 +97,8 @@ export default function Home() {
     const navigate = useNavigate();
     const access_token = getAccessToken();
     const [matches, set_matches] = useState<any[]>([]);
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [displayName, setDisplayName] = useState('');
 
     useEffect(() => {
         if (access_token == null) {
@@ -144,6 +146,21 @@ export default function Home() {
 
     }, [access_token, navigate]); // Add dependencies to prevent potential stale closures
 
+    const handleSaveName = async () => {
+        if (!access_token || !user_profile) return;
+        try {
+            const response = await api_update_display_name(access_token, displayName);
+            if (response.success) {
+                set_user_profile({ ...user_profile, name: displayName });
+                setIsEditingName(false);
+            } else {
+                alert(`Failed to update name: ${response.message}`);
+            }
+        } catch (error) {
+            console.error("Error updating name:", error);
+            alert("An error occurred while updating your name.");
+        }
+    };
     // Show a loading message while the user profile is being fetched
     if (!user_profile) {
         return <div>Loading your profile...</div>;
@@ -151,7 +168,26 @@ export default function Home() {
 
     return (
         <div>
-            <h1>Welcome, User #{user_profile.id}</h1>
+            {isEditingName ? (
+                <div>
+                    <input
+                        type="text"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        autoFocus
+                    />
+                    <button onClick={handleSaveName}>Save</button>
+                    <button onClick={() => {
+                        setIsEditingName(false);
+                        setDisplayName(user_profile.name || '');
+                    }}>Cancel</button>
+                </div>
+            ) : (
+                <h1 onClick={() => setIsEditingName(true)} style={{ cursor: 'pointer' }}>
+                    Welcome, {user_profile.name || `User #${user_profile.id}`}
+                    <span style={{ fontSize: '0.6em', marginLeft: '10px', color: 'gray' }}> (edit)</span>
+                </h1>
+            )}
 
             {/* Render the PetList component with the user's pets */}
             <PetList pets={user_profile.pets} />

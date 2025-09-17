@@ -1,3 +1,6 @@
+import { useNavigate } from "react-router";
+import { getAccessToken } from "../authentication";
+
 interface UserInfo {
     id: number,
     name: string | null,
@@ -49,7 +52,24 @@ export default function UsersMatchListView({ me, matches }: UsersMatchListViewPr
             </div>
         );
     }
+    const navigate = useNavigate(); // Hook for navigation
 
+    const handleMessageClick = async (otherUserId: number) => {
+        try {
+            const response = await fetch(`/api/chat/initiate/${otherUserId}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${getAccessToken()}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                navigate(`/chat/${data.chatThreadId}`); // Navigate to the chat view
+            } else {
+                console.error("Failed to initiate chat");
+            }
+        } catch (error) {
+            console.error("Error initiating chat:", error);
+        }
+    };
     return (
         <div style={{ fontFamily: 'sans-serif', maxWidth: '700px', margin: 'auto' }}>
             <h1 style={{ textAlign: 'center' }}>Your Matches</h1>
@@ -83,7 +103,18 @@ export default function UsersMatchListView({ me, matches }: UsersMatchListViewPr
                             </div>
                         </div>
 
-                        <button style={{ width: '100%', padding: '12px', fontSize: '1.1em', cursor: 'pointer', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px' }}>
+                        <button
+                            onClick={() => handleMessageClick(otherUser.id)}
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                fontSize: '1.1em',
+                                cursor: 'pointer',
+                                background: '#007bff',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px'
+                            }}>
                             Message {otherUser.name}
                         </button>
                     </div>

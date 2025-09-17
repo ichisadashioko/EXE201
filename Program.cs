@@ -10,6 +10,7 @@ using System.Net;
 using Google.Apis.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using Shioko.Tinder.Hubs;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
@@ -21,6 +22,7 @@ Log.Information("logger started!");
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>();
+builder.Services.AddSignalR();
 
 // TODO test in production environment
 var GOOGLE_CLOUD_STORAGE_BUCKET_NAME = Environment.GetEnvironmentVariable("GOOGLE_CLOUD_STORAGE_BUCKET_NAME");
@@ -170,6 +172,7 @@ app.UseSwaggerUI();
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.MapControllers();
+app.MapHub<ChatHub>("/chatHub");
 app.UseRouting();
 //app.UseAntiforgery();
 

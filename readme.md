@@ -13,6 +13,9 @@ Update-Database
 
 Add-Migration ChatSchema
 Update-Database
+
+Add-Migration ChatSchema2
+Update-Database
 ```
 
 ## for ubuntu

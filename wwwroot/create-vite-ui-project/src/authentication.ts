@@ -326,7 +326,29 @@ export async function api_get_user_profile(token: string) {
     }
   }
 }
+export async function api_update_display_name(access_token: string, new_name: string) {
+  try {
+    const response = await fetch('/api/users/name', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ display_name: new_name }),
+    });
 
+    const data = await response.json();
+
+    if (response.ok) {
+      return { success: true, data: data };
+    } else {
+      return { success: false, message: data.message || 'Failed to update name' };
+    }
+  } catch (error) {
+    console.error('API call failed: api_update_display_name', error);
+    return { success: false, message: 'An unexpected error occurred.' };
+  }
+}
 /**
  * Retrieves the access token from localStorage.
  * @returns {string | null} The stored access token, or null if not found.
