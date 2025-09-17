@@ -55,11 +55,11 @@ export default function UsersMatchListView({ me, matches }: UsersMatchListViewPr
             <h1 style={{ textAlign: 'center' }}>Your Matches</h1>
             {matches.map((match) => {
                 // Determine who the other user is
-                const otherUser = match.user_a.id === me.id ? match.user_b : match.user_a;
+                const otherUser = (match.user_a.id === me.id) ? match.user_b : match.user_a;
 
                 // Determine which list of pets belongs to the current user and which to the other user
-                const myLikedPets = match.user_a.id === me.id ? match.user_a_liked_pets : match.user_b_liked_pets;
-                const theirLikedPets = match.user_a.id === me.id ? match.user_b_liked_pets : match.user_a_liked_pets;
+                const pet_that_i_liked_list = (match.user_a.id === me.id) ? match.user_a_liked_pets : match.user_b_liked_pets;
+                const my_pets_that_the_other_liked_list = (match.user_a.id === me.id) ? match.user_b_liked_pets : match.user_a_liked_pets;
 
                 return (
                     <div key={`${match.user_a.id}-${match.user_b.id}`} style={{ border: '1px solid #ccc', borderRadius: '8px', padding: '16px', marginBottom: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
@@ -72,13 +72,13 @@ export default function UsersMatchListView({ me, matches }: UsersMatchListViewPr
                             <div>
                                 <h4>They liked your pet(s):</h4>
                                 <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-                                    {myLikedPets.map(pet => <PetDisplay key={pet.id} pet={pet} />)}
+                                    {my_pets_that_the_other_liked_list.map(pet => <PetDisplay key={pet.id} pet={pet} />)}
                                 </div>
                             </div>
                             <div>
                                 <h4>You liked their pet(s):</h4>
                                 <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-                                    {theirLikedPets.map(pet => <PetDisplay key={pet.id} pet={pet} />)}
+                                    {pet_that_i_liked_list.map(pet => <PetDisplay key={pet.id} pet={pet} />)}
                                 </div>
                             </div>
                         </div>

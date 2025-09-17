@@ -7,26 +7,30 @@ import tailwindcss from '@tailwindcss/vite'
 // const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [
-    react(),
-    cssInjectedByJsPlugin(),
-    tailwindcss(),
-  ],
-  build: {
-    outDir: '../',
-    emptyOutDir: false,
-    rollupOptions: {
-      // input: path.resolve(__dirname, 'src/main.tsx'),
-      input: 'src/main.tsx',
-      output: {
-        // manualChunks: () => 'app_bundle.js',
-        manualChunks: undefined,
-        entryFileNames: 'app_bundle.js',
-        chunkFileNames: 'app_bundle.js',
-        assetFileNames: 'assets/[name][extname]',
+export default defineConfig(({ mode }) => {
+  return {
+    plugins: [
+      react(),
+      cssInjectedByJsPlugin(),
+      tailwindcss(),
+    ],
+    build: {
+      minify: (mode !== 'development'),
+      // sourcemap: (mode === 'development') ? 'inline' : false,
+      outDir: '../',
+      emptyOutDir: false,
+      rollupOptions: {
+        // input: path.resolve(__dirname, 'src/main.tsx'),
+        input: 'src/main.tsx',
+        output: {
+          // manualChunks: () => 'app_bundle.js',
+          manualChunks: undefined,
+          entryFileNames: 'app_bundle.js',
+          chunkFileNames: 'app_bundle.js',
+          assetFileNames: 'assets/[name][extname]',
+        },
       },
+      cssCodeSplit: false,
     },
-    cssCodeSplit: false,
-  },
+  }
 })

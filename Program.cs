@@ -11,7 +11,9 @@ using Google.Apis.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 
-Log.Logger = new LoggerConfiguration().MinimumLevel.Debug().WriteTo.Console()
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Debug()
+    .WriteTo.Console()
     .WriteTo.File("logs/tinder_logs.txt", rollingInterval: RollingInterval.Day)
     .CreateLogger();
 
@@ -22,11 +24,11 @@ builder.Services.AddDbContext<AppDbContext>();
 
 // TODO test in production environment
 var GOOGLE_CLOUD_STORAGE_BUCKET_NAME = Environment.GetEnvironmentVariable("GOOGLE_CLOUD_STORAGE_BUCKET_NAME");
-Console.WriteLine($"GOOGLE_CLOUD_STORAGE_BUCKET_NAME: {GOOGLE_CLOUD_STORAGE_BUCKET_NAME}");
+Log.Information($"GOOGLE_CLOUD_STORAGE_BUCKET_NAME: {GOOGLE_CLOUD_STORAGE_BUCKET_NAME}");
 if (string.IsNullOrWhiteSpace(GOOGLE_CLOUD_STORAGE_BUCKET_NAME))
 {
     string log_message = "GOOGLE_CLOUD_STORAGE_BUCKET_NAME is not configured!";
-    Console.WriteLine(log_message);
+    Log.Information(log_message);
     throw new Exception(log_message);
 }
 {
@@ -39,7 +41,7 @@ if (string.IsNullOrWhiteSpace(GOOGLE_CLOUD_STORAGE_BUCKET_NAME))
 var storage_client = StorageClient.Create();
 
 var GOOGLE_STORAGE_CLIENT_PROXY = Environment.GetEnvironmentVariable("GOOGLE_STORAGE_CLIENT_PROXY");
-Console.WriteLine($"GOOGLE_STORAGE_CLIENT_PROXY: {GOOGLE_STORAGE_CLIENT_PROXY}");
+Log.Information($"GOOGLE_STORAGE_CLIENT_PROXY: {GOOGLE_STORAGE_CLIENT_PROXY}");
 if (!string.IsNullOrWhiteSpace(GOOGLE_STORAGE_CLIENT_PROXY))
 {
     HttpMessageHandler handler = storage_client.Service.HttpClient.MessageHandler;
@@ -65,25 +67,25 @@ if (!string.IsNullOrWhiteSpace(GOOGLE_STORAGE_CLIENT_PROXY))
     clientHandler.Proxy = new WebProxy(new Uri(GOOGLE_STORAGE_CLIENT_PROXY), true);
     clientHandler.UseProxy = true;
 
-    Console.WriteLine("Environment.GetEnvironmentVariable");
-    Console.WriteLine(Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS"));
+    Log.Information("Environment.GetEnvironmentVariable");
+    Log.Information(Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS"));
 
     //using FileStream fs = File.OpenRead("C:\\programs\\downloads\\ProjectilePea.png");
     //var retval = storage_client.UploadObject(GOOGLE_CLOUD_STORAGE_BUCKET_NAME, $"{DateTime.UtcNow.ToFileTimeUtc()}", null, fs);
-    //Console.WriteLine(retval);
-    //Console.WriteLine(retval.SelfLink);
-    //Console.WriteLine(retval.MediaLink);
+    //Log.Information(retval);
+    //Log.Information(retval.SelfLink);
+    //Log.Information(retval.MediaLink);
 }
 
 {
-    Console.WriteLine("test google cloud storage client config");
+    Log.Information("test google cloud storage client config");
     // test for upload and other required permissions
     // TODO
     var retval = storage_client.ListObjects(GOOGLE_CLOUD_STORAGE_BUCKET_NAME);
     foreach (var item in retval)
     {
-        Console.WriteLine($"MediaLink: {item.MediaLink}");
-        Console.WriteLine($"SelfLink: {item.SelfLink}");
+        Log.Information($"MediaLink: {item.MediaLink}");
+        Log.Information($"SelfLink: {item.SelfLink}");
         break;
     }
 }
@@ -188,11 +190,11 @@ if (!File.Exists(INDEX_HTML_PATH))
 
 app.Use(async (context, next) =>
 {
-    Console.WriteLine($"Request Path: {context.Request.Path}");
+    Log.Information($"Request Path: {context.Request.Path}");
     // if the request is for an API or a static file other than index.html, let it pass through
     if (context.Request.Path.StartsWithSegments("/index.html"))
     {
-        Console.WriteLine("Redirecting /index.html to /");
+        Log.Information("Redirecting /index.html to /");
         context.Response.Redirect("/");
         return;
     }

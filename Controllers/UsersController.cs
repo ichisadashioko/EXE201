@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
 using Shioko.Models;
 using Shioko.Services;
 
@@ -145,8 +146,8 @@ namespace Shioko.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
-                Console.WriteLine(ex.Message);
+                Log.Information(ex.ToString());
+                Log.Information(ex.Message);
                 return StatusCode(500, new
                 {
                     message = "internal server error",
@@ -249,8 +250,8 @@ namespace Shioko.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
-                Console.WriteLine(ex.Message);
+                Log.Information(ex.ToString());
+                Log.Information(ex.Message);
                 return StatusCode(500, new
                 {
                     message = "internal server error",
@@ -346,8 +347,8 @@ namespace Shioko.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
-                Console.WriteLine(ex.Message);
+                Log.Information(ex.ToString());
+                Log.Information(ex.Message);
                 return StatusCode(500, new
                 {
                     message = "internal server error",
@@ -446,8 +447,8 @@ namespace Shioko.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
-                Console.WriteLine(ex.Message);
+                Log.Information(ex.ToString());
+                Log.Information(ex.Message);
                 return StatusCode(500, new
                 {
                     message = "internal server error",
@@ -530,8 +531,8 @@ namespace Shioko.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
-                Console.WriteLine(ex.Message);
+                Log.Information(ex.ToString());
+                Log.Information(ex.Message);
                 return StatusCode(500, new
                 {
                     message = "internal server error",
@@ -699,8 +700,8 @@ namespace Shioko.Controllers
                     }
                     catch (Exception gcs_ex)
                     {
-                        Console.WriteLine(gcs_ex);
-                        Console.WriteLine(gcs_ex.Message);
+                        Log.Information(gcs_ex.ToString());
+                        Log.Information(gcs_ex.Message);
                         // TODO add more specific error code and status code
                         return StatusCode(500, new
                         {
@@ -723,8 +724,8 @@ namespace Shioko.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
-                Console.WriteLine(ex.Message);
+                Log.Information(ex.ToString());
+                Log.Information(ex.Message);
                 return StatusCode(500, new
                 {
                     message = "internal server error",
@@ -824,8 +825,8 @@ namespace Shioko.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
-                Console.WriteLine(ex.Message);
+                Log.Information(ex.ToString());
+                Log.Information(ex.Message);
                 return StatusCode(500, new
                 {
                     message = "internal server error",
@@ -928,7 +929,7 @@ namespace Shioko.Controllers
                 // TODO get user id from claim
                 foreach (var claim in User.Claims)
                 {
-                    Console.WriteLine($"Claim: {claim.Type} = {claim.Value}");
+                    Log.Information($"Claim: {claim.Type} = {claim.Value}");
                 }
 
                 // var user_id_claim = User.FindFirst(JwtRegisteredClaimNames.Sub);
@@ -999,8 +1000,8 @@ namespace Shioko.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
-                Console.WriteLine(ex.Message);
+                Log.Information(ex.ToString());
+                Log.Information(ex.Message);
                 return StatusCode(500, new
                 {
                     message = "internal server error",
@@ -1123,8 +1124,8 @@ namespace Shioko.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
-                Console.WriteLine(ex.Message);
+                Log.Information(ex.ToString());
+                Log.Information(ex.Message);
                 // TODO log exception
                 return StatusCode(500, new
                 {
