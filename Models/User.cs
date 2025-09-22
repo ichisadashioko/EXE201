@@ -71,6 +71,28 @@ namespace Shioko.Models
         public bool Active { get; set; } = true;
     }
 
+    public class UserImage{
+        [Key]
+        public int Id {get;set;}
+        public required int UserId {get;set;}
+        public virtual User User {get;set;}
+        public required string StorageUrl {get;set;}
+        public required string Hash {get;set;}
+        public required bool IsSafe {get;set;} = false; // default to false until verified by content moderation
+        public required DateTime CreatedAt {get;set;} = DateTime.UtcNow;
+        public DateTime? VerifiedAt {get;set;} = null;
+        public required DateTime ModifiedAt {get;set;} = DateTime.UtcNow;
+        public required bool Active {get;set;} = true;
+    }
+
+    public class GoogleVisionCache {
+        [Key]
+        public int Id {get;set;}
+        public required string Hash {get;set;} // hash string of the image
+        public required string ResponseJson {get;set;} // json string of the response
+        public required DateTime CreatedAt {get;set;} = DateTime.UtcNow;
+    }
+
     public class MatchingRecord
     {
         [Key]
@@ -155,6 +177,8 @@ namespace Shioko.Models
         public DbSet<MatchingRecord> MatchingRecords { get; set; }
         public DbSet<ChatMessage> ChatMessages { get; set; }
         public DbSet<ChatThread> ChatThreads { get; set; }
+        public DbSet<UserImage> UserImages { get; set; }
+        public DbSet<GoogleVisionCache> GoogleVisionCaches { get; set; }
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

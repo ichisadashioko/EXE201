@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+
 namespace Shioko
 {
     public class GoogleCloudStorageConfig
@@ -6,6 +8,20 @@ namespace Shioko
     }
     public static class Utils
     {
+        public static async Task<string> ComputeFileHashAsync(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                throw new ArgumentException("file is empty");
+            }
+
+            using var sha256 = SHA512.Create();
+            using var stream = file.OpenReadStream();
+            var hash_bytes = await sha256.ComputeHashAsync(stream);
+
+            return BitConverter.ToString(hash_bytes).Replace("-", "").ToUpperInvariant();
+        }
+
         //public static const int UPLOAD_IMAGE_SIZE_LIMIT = 5242880; // (5 * 1024 * 1024);
         public static bool ShouldServeIndexHtmlContent(PathString request_path)
         {

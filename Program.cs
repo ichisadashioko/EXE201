@@ -79,7 +79,7 @@ if (!string.IsNullOrWhiteSpace(GOOGLE_STORAGE_CLIENT_PROXY))
     //Log.Information(retval.MediaLink);
 }
 
-{
+if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SKIP_GCS_TEST"))){
     Log.Information("test google cloud storage client config");
     // test for upload and other required permissions
     // TODO

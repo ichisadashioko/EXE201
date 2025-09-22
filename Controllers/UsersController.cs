@@ -35,6 +35,79 @@ namespace Shioko.Controllers
             this.gcs_config = gcs_config;
         }
 
+        public class ai_generate_offspring_dto
+        {
+            // TODO use saved image url/verify image url
+            // TODO
+            // public required string image_source_type {get;set;}
+            // TODO check max image size 5MB each
+            public required string image_a_url {get;set;}
+            public required string image_b_url {get;set;}
+        }
+
+        [HttpPost("/api/ai/offspring")]
+        [Authorize]
+        public async Task<IActionResult> GenerateOffspring([FromBody] ai_generate_offspring_dto input_obj)
+        {
+
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new
+                    {
+                        message = "bad request", // TODO replace with error status code
+                    });
+                }
+
+                var user_id_claim = User.FindFirst(CustomClaimTypes.UserId);
+                if (user_id_claim == null)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User ID not found in token", // TODO replace with error status code
+                    });
+                }
+
+                int user_id;
+
+                if (!Int32.TryParse(user_id_claim.Value, out user_id))
+                {
+                    return Unauthorized(new
+                    {
+                        message = "Invalid user ID in token"
+                    });
+                }
+
+                var user = await ctx.Users
+                    .Where(obj => obj.Id == user_id) // TODO add active check
+                    .FirstOrDefaultAsync();
+
+                if (user == null)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User not found"
+                    });
+                }
+
+                // TODO rate limiting using both user ID and IP address
+                return Ok(new {
+                    message = "TODO",
+                    image_url = "/icon-512.png",
+                });
+            }
+            catch (Exception ex)
+            {
+                Log.Information(ex.ToString());
+                Log.Information(ex.Message);
+                return StatusCode(500, new
+                {
+                    message = "internal server error",
+                });
+            }
+        }
+
         public class users_update_display_name_dto
         {
             public required string display_name { get; set; }

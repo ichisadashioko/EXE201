@@ -16,6 +16,9 @@ Update-Database
 
 Add-Migration ChatSchema2
 Update-Database
+
+Add-Migration UserImageContentWIP1
+Update-Database
 ```
 
 ## for ubuntu

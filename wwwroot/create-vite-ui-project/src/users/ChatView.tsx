@@ -26,8 +26,8 @@ export default function ChatView() {
         fetch(`/api/chat/${chatThreadId}/messages`, {
             headers: { 'Authorization': `Bearer ${getAccessToken()}` }
         })
-        .then(res => res.json())
-        .then(data => setMessages(data.messages));
+            .then(res => res.json())
+            .then(data => setMessages(data.messages));
 
         // Setup SignalR connection
         const newConnection = new HubConnectionBuilder()
@@ -74,9 +74,10 @@ export default function ChatView() {
         }
     };
 
-    console.debug(`typeof(messages): ${typeof(messages)}`);
+    console.debug(`typeof(messages): ${typeof (messages)}`);
     console.debug(`messages: ${JSON.stringify(messages)}`);
 
+    // TODO update UI to show sender's name instead of user ID
     return (
         <div style={{ maxWidth: '600px', margin: 'auto', border: '1px solid #ccc', borderRadius: '8px', display: 'flex', flexDirection: 'column', height: '80vh' }}>
             <div style={{ flexGrow: 1, overflowY: 'auto', padding: '10px' }}>
@@ -94,7 +95,14 @@ export default function ChatView() {
                     style={{ flexGrow: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
                     placeholder="Type a message..."
                 />
-                <button type="submit" style={{ marginLeft: '10px', padding: '8px 12px', borderRadius: '4px', border: 'none', background: '#007bff', color: 'white' }}>Send</button>
+                <button type="submit" style={{
+                    marginLeft: '10px',
+                    padding: '8px 12px',
+                    borderRadius: '4px',
+                    border: 'none',
+                    background: '#007bff',
+                    color: 'white'
+                }}>Send</button>
             </form>
         </div>
     );
