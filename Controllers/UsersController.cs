@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Text;
 using Google.Cloud.Storage.V1;
@@ -21,18 +22,21 @@ namespace Shioko.Controllers
         private readonly TokenService token_service;
         private readonly StorageClient google_cloud_storage_client;
         private readonly GoogleCloudStorageConfig gcs_config;
+        private readonly IImageUploadService upload_service;
 
         public UsersController(
             AppDbContext ctx,
             TokenService token_service,
             StorageClient google_cloud_storage_client,
-            GoogleCloudStorageConfig gcs_config
+            GoogleCloudStorageConfig gcs_config,
+            IImageUploadService upload_service
         )
         {
             this.ctx = ctx;
             this.token_service = token_service;
             this.google_cloud_storage_client = google_cloud_storage_client;
             this.gcs_config = gcs_config;
+            this.upload_service = upload_service;
         }
 
         public class ai_generate_offspring_dto
@@ -41,12 +45,19 @@ namespace Shioko.Controllers
             // TODO
             // public required string image_source_type {get;set;}
             // TODO check max image size 5MB each
-            public required string image_a_url {get;set;}
-            public required string image_b_url {get;set;}
+            public required string image_a_url { get; set; }
+            public required string image_b_url { get; set; }
+        }
+
+        public class GenerateOffspring_RESPONSE_DTO
+        {
+            public required string message { get; set; }
+            public string? image_url { get; set; }
         }
 
         [HttpPost("/api/ai/offspring")]
         [Authorize]
+        [ProducesResponseType(typeof(GenerateOffspring_RESPONSE_DTO), 200)]
         public async Task<IActionResult> GenerateOffspring([FromBody] ai_generate_offspring_dto input_obj)
         {
 
@@ -92,7 +103,8 @@ namespace Shioko.Controllers
                 }
 
                 // TODO rate limiting using both user ID and IP address
-                return Ok(new {
+                return Ok(new
+                {
                     message = "TODO",
                     image_url = "/icon-512.png",
                 });
@@ -113,8 +125,14 @@ namespace Shioko.Controllers
             public required string display_name { get; set; }
         }
 
+        public class GENERIC_RESPONSE_DTO
+        {
+            public required string message { get; set; }
+        }
+
         [HttpPost("/api/users/name")]
         [Authorize]
+        [ProducesResponseType(typeof(GENERIC_RESPONSE_DTO), 200)]
         public async Task<ActionResult> UpdateDisplayName([FromBody] users_update_display_name_dto input_obj)
         {
             var userIdClaim = User.FindFirst(CustomClaimTypes.UserId);
@@ -132,7 +150,7 @@ namespace Shioko.Controllers
             var user = await ctx.Users.FindAsync(userId);
             if (user == null)
             {
-                return Unauthorized();
+                return Unauthorized(new { message = "Unauthorized" });
             }
 
             user.DisplayName = new_display_name;
@@ -142,8 +160,14 @@ namespace Shioko.Controllers
             return Ok(new { message = "Display name updated successfully" });
         }
 
+        public class InitiateChat_RESPONSE_DTO : GENERIC_RESPONSE_DTO
+        {
+            public required int chatThreadId { get; set; }
+        }
+
         [HttpPost("/api/chat/initiate/{other_user_id}")]
         [Authorize]
+        [ProducesResponseType(typeof(InitiateChat_RESPONSE_DTO), 200)]
         public async Task<ActionResult> InitiateChat([FromRoute] int other_user_id)
         {
             var userIdClaim = User.FindFirst(CustomClaimTypes.UserId);
@@ -178,6 +202,7 @@ namespace Shioko.Controllers
         // endpoint to get the message history for a chat thread
         [Authorize]
         [HttpGet("/api/chat/{thread_id}/messages")]
+        [ProducesResponseType(typeof(ChatMessageDto), 200)]
         public async Task<ActionResult> GetChatMessages([FromRoute] int thread_id)
         {
             var userIdClaim = User.FindFirst(CustomClaimTypes.UserId);
@@ -207,6 +232,20 @@ namespace Shioko.Controllers
                 });
 
             return Ok(new { messages });
+        }
+
+        // Chat message for /api/chat/{thread_id}/messages
+        public class ChatMessageDto
+        {
+            public int id { get; set; }
+            public int senderUserId { get; set; }
+            public string content { get; set; }
+            public long timestamp { get; set; }
+        }
+
+        public class GetChatMessagesResponseDto
+        {
+            public required List<ChatMessageDto> messages { get; set; }
         }
 
         public class matching_rating_dto
@@ -838,28 +877,29 @@ namespace Shioko.Controllers
                         });
                     }
 
-                    string bucketName = gcs_config.BUCKET_NAME;
-                    string objectName = $"users/upload/{Guid.NewGuid()}";
-
                     try
                     {
-                        var gcs_object = google_cloud_storage_client.UploadObject(bucketName, objectName, media_type, stream);
-                        if (gcs_object == null)
+                        var public_image_url = await upload_service.UploadImageAsync(stream, media_type);
+                        if(public_image_url == null)
                         {
                             return StatusCode(500, new
                             {
                                 message = "internal server error | failed to upload image",
                             });
                         }
-                        var public_image_url = gcs_object.MediaLink;
+
                         PetPicture picture = new PetPicture()
                         {
                             Url = public_image_url,
                             CreatedAt = DateTime.UtcNow,
                             PetId = petId,
                         };
+
                         await ctx.PetPictures.AddAsync(picture);
                         await ctx.SaveChangesAsync();
+
+                        // TODO automatically set the pet profile picture if currently unset
+                        // TODO sync UI to reflect current state more accurately
 
                         return Ok(new
                         {
@@ -884,6 +924,56 @@ namespace Shioko.Controllers
                         });
                         // TODO
                     }
+
+                    //string bucketName = gcs_config.BUCKET_NAME;
+                    //string objectName = $"users/upload/{Guid.NewGuid()}";
+
+                    //try
+                    //{
+                    //    var gcs_object = google_cloud_storage_client.UploadObject(bucketName, objectName, media_type, stream);
+                    //    if (gcs_object == null)
+                    //    {
+                    //        return StatusCode(500, new
+                    //        {
+                    //            message = "internal server error | failed to upload image",
+                    //        });
+                    //    }
+                    //    var public_image_url = gcs_object.MediaLink;
+                    //    PetPicture picture = new PetPicture()
+                    //    {
+                    //        Url = public_image_url,
+                    //        CreatedAt = DateTime.UtcNow,
+                    //        PetId = petId,
+                    //    };
+                    //    await ctx.PetPictures.AddAsync(picture);
+                    //    await ctx.SaveChangesAsync();
+
+                    //    // TODO automatically set the pet profile picture if currently unset
+                    //    // TODO sync UI to reflect current state more accurately
+
+                    //    return Ok(new
+                    //    {
+                    //        message = "OK",
+                    //        image_info = new
+                    //        {
+                    //            id = picture.PetPictureId,
+                    //            url = picture.Url,
+                    //            created_ts = picture.CreatedAt.ToFileTimeUtc(),// TODO unix timestamp
+                    //        },
+                    //    });
+                    //}
+                    //catch (Exception gcs_ex)
+                    //{
+                    //    Log.Information(gcs_ex.ToString());
+                    //    Log.Information(gcs_ex.Message);
+                    //    // TODO add more specific error code and status code
+                    //    return StatusCode(500, new
+                    //    {
+                    //        message = "internal server error | failed to upload image",
+                    //        //message = "internal server error",
+                    //    });
+                    //    // TODO
+                    //}
                 }
                 // TODO validate file type using magic header
                 //var stream = file.OpenReadStream();

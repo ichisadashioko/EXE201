@@ -9,6 +9,11 @@ namespace Shioko.Models
         [Key]
         public int Id { get; set; }
         public string? DisplayName { get; set; }
+        public string? ExtraInfoJson {get;set;} // json string for future extensibility
+        [ForeignKey("UserImage")]
+        public int? ProfileUserImageId {get;set;}
+        public virtual UserImage? ProfileUserImage {get;set;}
+        public virtual ICollection<UserImage> UserImages {get;set;}
         // public string? Email { get; set; }
         public bool IsGuest { get; set; }
         public virtual ICollection<Pet> Pets { get; set; }
@@ -193,6 +198,12 @@ namespace Shioko.Models
                 .WithOne(ap => ap.User)
                 .HasForeignKey(ap => ap.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<User>()
+                .HasOne(u => u.ProfileUserImage)
+                .WithMany()
+                .HasForeignKey(p => p.ProfileUserImageId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<Pet>()
                 .HasMany(p => p.Pictures)

@@ -19,6 +19,12 @@ Update-Database
 
 Add-Migration UserImageContentWIP1
 Update-Database
+
+Add-Migration UserImageContentWIP2
+Update-Database
+
+Add-Migration UserImageContentWIP3
+Update-Database
 ```
 
 ## for ubuntu
@@ -73,4 +79,21 @@ scp "C:\artifact" user@hostname:/root/data
 ```sh
 # not usable with SQLite
 dotnet-ef migrations script --output "publish/migration_update.sql" --idempotent
+```
+
+# setup local google cloud emulator
+
+# generate api types for typescript
+
+```sh
+# cmd
+set NODE_TLS_REJECT_UNAUTHORIZED=0
+
+# bash
+export NODE_TLS_REJECT_UNAUTHORIZED=0
+
+# powershell TODO
+
+# TODO allow to pass input host location
+npm run openapi_create_types
 ```

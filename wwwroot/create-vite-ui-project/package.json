@@ -8,11 +8,13 @@
     "build": "tsc -b && vite build",
     "build_dev": "tsc -b && vite build --mode development",
     "lint": "eslint .",
+    "openapi_create_types": "openapi-typescript https://localhost:7010/swagger/v1/swagger.json --output src/types/api.generated.ts",
     "preview": "vite preview"
   },
   "dependencies": {
     "@microsoft/signalr": "^9.0.6",
     "@tailwindcss/vite": "^4.1.13",
+    "openapi-fetch": "^0.14.0",
     "react": "19.1.1",
     "react-dom": "19.1.1",
     "react-router": "7.8.2",
@@ -28,6 +30,7 @@
     "eslint-plugin-react-hooks": "5.2.0",
     "eslint-plugin-react-refresh": "0.4.20",
     "globals": "16.3.0",
+    "openapi-typescript": "^7.9.1",
     "typescript": "~5.8.3",
     "typescript-eslint": "8.39.1",
     "vite": "7.1.2"

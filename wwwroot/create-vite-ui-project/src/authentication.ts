@@ -1,5 +1,23 @@
+// import type { ApiContract } from './typing';
+
+// let api: ApiContract;
+
+// if(import.meta.env.VITE_API_MOCKING === 'true') {
+//     console.log("Using mocked API");
+//     api = await import('./api_utils.mock');
+// } else {
+//     console.log("Using real API");
+//     api = await import('./api_utils');
+// }
+
+// export default api;
+
 // authService.js
 // A shared module for handling access token storage and API requests.
+
+// import type { ApiContract } from "./typing";
+// const API_TYPES = await import("./types/api.generated"); // Import the generated types
+// import type { paths } from "./types/api.generated";
 
 // Constants for localStorage keys and API endpoints.
 const ACCESS_TOKEN_KEY = 'access_token';
@@ -16,6 +34,54 @@ export const storeAccessToken = (token: string) => {
     console.error('Failed to store access token:', error);
   }
 };
+
+// import createClient from "openapi-fetch";
+
+// const client = createClient<paths>();
+
+export async function api_login_with_email(email: string, password: string) {
+  try {
+    // API_TYPES.paths
+    // client.POST('/api/users/login_with_email', {
+    //     requestBody: {
+    //         email: email,
+    //         password: password,
+    //     }
+    // });
+    const response_obj = await fetch("/api/users/login_with_email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (response_obj.ok) {
+      const data = await response_obj.json();
+      return {
+        success: true,
+        status_code: response_obj.status,
+        data: data,// TODO define type
+        message: 'OK',
+      }
+    } else {
+      return {
+        success: false,
+        status_code: response_obj.status,
+        data: await response_obj.text(),
+        message: 'Failed to api_login_with_email',
+      }
+    }
+  } catch (error) {
+    return {
+      success: false,
+      status_code: null,
+      data: null,
+      message: `An error occurred: ${error}`,
+      error: error,
+    }
+  }
+}
 
 export async function api_matching_record_store_rating(
   token: string,
@@ -465,3 +531,20 @@ const UserProfile = () => {
 
 export default UserProfile;
 */
+
+// const api: ApiContract = {
+const api = {
+  storeAccessToken,
+  getAccessToken,
+  api_login_with_email,
+  api_matching_record_store_rating,
+  api_pets_matching,
+  api_get_user_profile,
+  api_get_matches,
+  api_update_display_name,
+  api_create_new_pet,
+  api_get_pet_info,
+  api_upload_pet_image,
+};
+
+export default api;

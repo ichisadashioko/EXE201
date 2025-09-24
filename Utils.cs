@@ -34,6 +34,10 @@ namespace Shioko
             {
                 return false;
             }
+            if (request_path.StartsWithSegments("/uploads/"))
+            {
+                return false;
+            }
             if (request_path.StartsWithSegments("/api"))
             {
                 return false;

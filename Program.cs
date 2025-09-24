@@ -24,6 +24,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>();
 builder.Services.AddSignalR();
 
+bool isDevelopment = string.Equals(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), "development", StringComparison.InvariantCultureIgnoreCase);
+Log.Information($"isDevelopment : {isDevelopment}");
+
+
 // TODO test in production environment
 var GOOGLE_CLOUD_STORAGE_BUCKET_NAME = Environment.GetEnvironmentVariable("GOOGLE_CLOUD_STORAGE_BUCKET_NAME");
 Log.Information($"GOOGLE_CLOUD_STORAGE_BUCKET_NAME: {GOOGLE_CLOUD_STORAGE_BUCKET_NAME}");
@@ -31,68 +35,91 @@ if (string.IsNullOrWhiteSpace(GOOGLE_CLOUD_STORAGE_BUCKET_NAME))
 {
     string log_message = "GOOGLE_CLOUD_STORAGE_BUCKET_NAME is not configured!";
     Log.Information(log_message);
-    throw new Exception(log_message);
-}
-{
-    GoogleCloudStorageConfig config = new GoogleCloudStorageConfig() { BUCKET_NAME = GOOGLE_CLOUD_STORAGE_BUCKET_NAME };
-    //builder.Services.Configure<GoogleCloudStorageConfig>(config);
-    builder.Services.AddSingleton(config);
-}
-
-// register Google Cloud Storage client
-var storage_client = StorageClient.Create();
-
-var GOOGLE_STORAGE_CLIENT_PROXY = Environment.GetEnvironmentVariable("GOOGLE_STORAGE_CLIENT_PROXY");
-Log.Information($"GOOGLE_STORAGE_CLIENT_PROXY: {GOOGLE_STORAGE_CLIENT_PROXY}");
-if (!string.IsNullOrWhiteSpace(GOOGLE_STORAGE_CLIENT_PROXY))
-{
-    HttpMessageHandler handler = storage_client.Service.HttpClient.MessageHandler;
-    //HttpClientHandler http_client_handler = null;
-    while (true)
+    if (!isDevelopment)
     {
-        if (handler is DelegatingHandler)
-        {
-            handler = ((DelegatingHandler)handler).InnerHandler;
-        }
-        else if (handler is HttpClientHandler)
-        {
-            //http_client_handler = handler;
-            break;
-        }
-        else
-        {
-            throw new Exception("unexpected handler type");
-        }
+        throw new Exception(log_message);
     }
 
-    var clientHandler = (HttpClientHandler)handler;
-    clientHandler.Proxy = new WebProxy(new Uri(GOOGLE_STORAGE_CLIENT_PROXY), true);
-    clientHandler.UseProxy = true;
-
-    Log.Information("Environment.GetEnvironmentVariable");
-    Log.Information(Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS"));
-
-    //using FileStream fs = File.OpenRead("C:\\programs\\downloads\\ProjectilePea.png");
-    //var retval = storage_client.UploadObject(GOOGLE_CLOUD_STORAGE_BUCKET_NAME, $"{DateTime.UtcNow.ToFileTimeUtc()}", null, fs);
-    //Log.Information(retval);
-    //Log.Information(retval.SelfLink);
-    //Log.Information(retval.MediaLink);
-}
-
-if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SKIP_GCS_TEST"))){
-    Log.Information("test google cloud storage client config");
-    // test for upload and other required permissions
-    // TODO
-    var retval = storage_client.ListObjects(GOOGLE_CLOUD_STORAGE_BUCKET_NAME);
-    foreach (var item in retval)
+    // config upload service
+    builder.Services.AddSingleton<IImageUploadService>(sp =>
     {
-        Log.Information($"MediaLink: {item.MediaLink}");
-        Log.Information($"SelfLink: {item.SelfLink}");
-        break;
-    }
+        var env = sp.GetRequiredService<IWebHostEnvironment>();
+        return new LocalImageUploadService(env.WebRootPath);
+    });
 }
+else
+{
+    {
+        GoogleCloudStorageConfig config = new GoogleCloudStorageConfig() { BUCKET_NAME = GOOGLE_CLOUD_STORAGE_BUCKET_NAME };
+        //builder.Services.Configure<GoogleCloudStorageConfig>(config);
+        builder.Services.AddSingleton(config);
+    }
 
-builder.Services.AddSingleton(storage_client);
+    // register Google Cloud Storage client
+    var storage_client = StorageClient.Create();
+
+    //Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+    if (isDevelopment)
+    {
+        var GOOGLE_STORAGE_CLIENT_PROXY = Environment.GetEnvironmentVariable("GOOGLE_STORAGE_CLIENT_PROXY");
+        Log.Information($"GOOGLE_STORAGE_CLIENT_PROXY: {GOOGLE_STORAGE_CLIENT_PROXY}");
+        if (!string.IsNullOrWhiteSpace(GOOGLE_STORAGE_CLIENT_PROXY))
+        {
+            HttpMessageHandler handler = storage_client.Service.HttpClient.MessageHandler;
+            //HttpClientHandler http_client_handler = null;
+            while (true)
+            {
+                if (handler is DelegatingHandler)
+                {
+                    handler = ((DelegatingHandler)handler).InnerHandler;
+                }
+                else if (handler is HttpClientHandler)
+                {
+                    //http_client_handler = handler;
+                    break;
+                }
+                else
+                {
+                    throw new Exception("unexpected handler type");
+                }
+            }
+
+            var clientHandler = (HttpClientHandler)handler;
+            clientHandler.Proxy = new WebProxy(new Uri(GOOGLE_STORAGE_CLIENT_PROXY), true);
+            clientHandler.UseProxy = true;
+
+            Log.Information("Environment.GetEnvironmentVariable");
+            Log.Information($"{Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS")}");
+
+            //using FileStream fs = File.OpenRead("C:\\programs\\downloads\\ProjectilePea.png");
+            //var retval = storage_client.UploadObject(GOOGLE_CLOUD_STORAGE_BUCKET_NAME, $"{DateTime.UtcNow.ToFileTimeUtc()}", null, fs);
+            //Log.Information(retval);
+            //Log.Information(retval.SelfLink);
+            //Log.Information(retval.MediaLink);
+        }
+
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SKIP_GCS_TEST")))
+        {
+            Log.Information("test google cloud storage client config");
+            // test for upload and other required permissions
+            // TODO
+            var retval = storage_client.ListObjects(GOOGLE_CLOUD_STORAGE_BUCKET_NAME);
+            foreach (var item in retval)
+            {
+                Log.Information($"MediaLink: {item.MediaLink}");
+                Log.Information($"SelfLink: {item.SelfLink}");
+                break;
+            }
+        }
+    }
+    builder.Services.AddSingleton(storage_client);
+    builder.Services.AddSingleton<IImageUploadService>(sp =>
+    {
+        var storageClient = sp.GetRequiredService<StorageClient>();
+        var gcsConfig = sp.GetRequiredService<GoogleCloudStorageConfig>();
+        return new GoogleCloudImageUploadService(storageClient, gcsConfig);
+    });
+}
 
 // Add services to the container.
 // builder.Services.AddRazorPages();
