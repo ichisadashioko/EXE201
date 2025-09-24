@@ -56,6 +56,10 @@ sudo apt-get install mssql-tools mssql-tools18 unixodbc-dev
 
 ```cmd
 dotnet publish --os linux --self-contained true --interactive --configuration Release --output publish
+
+dotnet publish --os "win" --self-contained true --interactive --configuration Release --output "publish_win-x64"
+dotnet publish --os "win" --self-contained true --interactive --configuration Release --output "publish_win_x64_release"
+dotnet publish --os "win" --self-contained true --interactive --configuration Debug --output "publish_win_x64_debug"
 ```
 
 # `scp` command

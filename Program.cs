@@ -11,6 +11,7 @@ using Google.Apis.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Shioko.Tinder.Hubs;
+using Microsoft.Extensions.FileProviders;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
@@ -197,7 +198,19 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+if (isDevelopment)
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(app.Environment.WebRootPath),
+        ServeUnknownFileTypes = true, // <-- Enable serving files without extensions
+        DefaultContentType = "application/octet-stream" // or "image/jpeg" if you expect images
+    });
+}
+else
+{
+    app.UseStaticFiles();
+}
 app.MapControllers();
 app.MapHub<ChatHub>("/chatHub");
 app.UseRouting();
@@ -229,7 +242,12 @@ app.Use(async (context, next) =>
         return;
     }
 
-    if (Utils.ShouldServeIndexHtmlContent(context.Request.Path))
+    var request_path = context.Request.Path;
+    var filter_retval = Utils.ShouldServeIndexHtmlContent(request_path);
+    Log.Debug($"Utils.ShouldServeIndexHtmlContent returns {filter_retval}");
+    Log.Debug($"{request_path}");
+
+    if (filter_retval)
     {
         if (File.Exists(INDEX_HTML_PATH))
         {

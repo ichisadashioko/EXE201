@@ -20,22 +20,16 @@ namespace Shioko.Controllers
     {
         private readonly AppDbContext ctx;
         private readonly TokenService token_service;
-        private readonly StorageClient google_cloud_storage_client;
-        private readonly GoogleCloudStorageConfig gcs_config;
         private readonly IImageUploadService upload_service;
 
         public UsersController(
             AppDbContext ctx,
             TokenService token_service,
-            StorageClient google_cloud_storage_client,
-            GoogleCloudStorageConfig gcs_config,
             IImageUploadService upload_service
         )
         {
             this.ctx = ctx;
             this.token_service = token_service;
-            this.google_cloud_storage_client = google_cloud_storage_client;
-            this.gcs_config = gcs_config;
             this.upload_service = upload_service;
         }
 

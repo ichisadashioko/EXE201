@@ -17,6 +17,7 @@ wwwroot/app_bundle.js
 wwwroot/app_bundle.js.map
 *.Backup.tmp
 publish
+publish_*
 tmp_note*
 appsettings.Production.json
 tinder.service
