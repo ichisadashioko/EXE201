@@ -526,6 +526,11 @@ namespace Shioko
             return BitConverter.ToString(hash_bytes).Replace("-", "").ToUpperInvariant();
         }
 
+        public static long ToUnixTS(this DateTime datetime)
+        {
+            return ((DateTimeOffset)datetime).ToUnixTimeSeconds();
+        }
+
         //public static const int UPLOAD_IMAGE_SIZE_LIMIT = 5242880; // (5 * 1024 * 1024);
         public static bool ShouldServeIndexHtmlContent(PathString request_path)
         {

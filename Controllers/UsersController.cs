@@ -57,6 +57,139 @@ namespace Shioko.Controllers
             public string? image_url { get; set; }
         }
 
+        public class OffspringImageFilterInput
+        {
+            public string? hash { get; set; }
+        }
+
+        [HttpPost("/api/ai/users/images")]
+        [Authorize]
+        public async Task<IActionResult> PullAllImageDataForPetBSelection(
+            [FromBody] OffspringImageFilterInput input_obj
+            )
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new
+                    {
+                        message = "bad request", // TODO replace with error status code
+                    });
+                }
+
+                var user_id_claim = User.FindFirst(CustomClaimTypes.UserId);
+                if (user_id_claim == null)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User ID not found in token", // TODO replace with error status code
+                    });
+                }
+
+                int user_id;
+
+                if (!Int32.TryParse(user_id_claim.Value, out user_id))
+                {
+                    return Unauthorized(new
+                    {
+                        message = "Invalid user ID in token"
+                    });
+                }
+
+                var user = await ctx.Users
+                    .Where(obj => obj.Id == user_id) // TODO add active check
+                    .FirstOrDefaultAsync();
+
+                if (user == null)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User not found"
+                    });
+                }
+
+                var pet_list = await ctx.Pets
+                    .Where(obj => (
+                    (obj.UserId == user_id)
+                    && (obj.Active == true)
+                    ))
+                    .Include(obj => obj.ProfilePicture)
+                    .Include(obj => obj.Pictures)
+                    .ToListAsync();
+
+                var user_images = await ctx.UserImages.Where(obj => (obj.UserId == user_id)).ToListAsync();
+
+                var other_image_hash = input_obj.hash;
+                if (other_image_hash != null)
+                {
+                   // TODO filter pet type using google vision api caches
+                }
+
+                List<string> pet_image_url_list = new List<string>();
+                foreach (var pet in pet_list)
+                {
+                    foreach (var picture in pet.Pictures)
+                    {
+                        pet_image_url_list.Add(picture.Url);
+                    }
+                }
+
+                List<UserImage> other_user_image_list = new List<UserImage>();
+                foreach (var user_image in user_images)
+                {
+                    if (pet_image_url_list.Contains(user_image.StorageUrl))
+                    {
+                        continue;
+                    }
+
+                    other_user_image_list.Add(user_image);
+                }
+
+                var retval_obj = new
+                {
+                    pets = pet_list.Select(obj => new
+                    {
+                        id = obj.PetId,
+                        name = obj.Name,
+                        profile_picture_id = obj.ProfilePictureId,
+                        images = obj.Pictures.Where(picture => (picture.Active && (!picture.Removed))).Select(picture => new
+                        {
+                            id = picture.PetPictureId,
+                            url = picture.Url,
+                            ts = picture.CreatedAt.ToUnixTS(),
+                        })
+                    }),
+                    user_images = other_user_image_list.Select(user_image => new
+                    {
+                        id = user_image.Id,
+                        url = user_image.StorageUrl,
+                        ts = user_image.ModifiedAt.ToUnixTS(),
+                    })
+                };
+
+                return Ok(retval_obj);
+
+                // var user = await ctx.Users
+                //     .Include(obj => obj.Pets)
+                //     .ThenInclude(pet => pet.ProfilePicture)
+                //     .Include(obj => obj.Pets)
+                //     .ThenInclude(pet => pet.Pictures)
+                //     .Include(obj => obj.UserImages)
+                //     .Where(obj => obj.Id == user_id) // TODO add active check
+                //     .FirstOrDefaultAsync();
+            }
+            catch (Exception ex)
+            {
+                Log.Information(ex.ToString());
+                Log.Information(ex.Message);
+                return StatusCode(500, new
+                {
+                    message = "internal server error",
+                });
+            }
+        }
+
         [HttpPost("/api/ai/offspring")]
         [Authorize]
         [ProducesResponseType(typeof(GenerateOffspring_RESPONSE_DTO), 200)]
