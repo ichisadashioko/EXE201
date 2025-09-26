@@ -9,11 +9,11 @@ namespace Shioko.Models
         [Key]
         public int Id { get; set; }
         public string? DisplayName { get; set; }
-        public string? ExtraInfoJson {get;set;} // json string for future extensibility
+        public string? ExtraInfoJson { get; set; } // json string for future extensibility
         [ForeignKey("UserImage")]
-        public int? ProfileUserImageId {get;set;}
-        public virtual UserImage? ProfileUserImage {get;set;}
-        public virtual ICollection<UserImage> UserImages {get;set;}
+        public int? ProfileUserImageId { get; set; }
+        public virtual UserImage? ProfileUserImage { get; set; }
+        public virtual ICollection<UserImage> UserImages { get; set; }
         // public string? Email { get; set; }
         public bool IsGuest { get; set; }
         public virtual ICollection<Pet> Pets { get; set; }
@@ -76,26 +76,28 @@ namespace Shioko.Models
         public bool Active { get; set; } = true;
     }
 
-    public class UserImage{
+    public class UserImage
+    {
         [Key]
-        public int Id {get;set;}
-        public required int UserId {get;set;}
-        public virtual User User {get;set;}
-        public required string StorageUrl {get;set;}
-        public required string Hash {get;set;}
-        public required bool IsSafe {get;set;} = false; // default to false until verified by content moderation
-        public required DateTime CreatedAt {get;set;} = DateTime.UtcNow;
-        public DateTime? VerifiedAt {get;set;} = null;
-        public required DateTime ModifiedAt {get;set;} = DateTime.UtcNow;
-        public required bool Active {get;set;} = true;
+        public int Id { get; set; }
+        public required int UserId { get; set; }
+        public virtual User User { get; set; }
+        public required string StorageUrl { get; set; }
+        public required string Hash { get; set; }
+        public required bool IsSafe { get; set; } = false; // default to false until verified by content moderation
+        public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? VerifiedAt { get; set; } = null;
+        public required DateTime ModifiedAt { get; set; } = DateTime.UtcNow;
+        public required bool Active { get; set; } = true;
     }
 
-    public class GoogleVisionCache {
+    public class GoogleVisionCache
+    {
         [Key]
-        public int Id {get;set;}
-        public required string Hash {get;set;} // hash string of the image
-        public required string ResponseJson {get;set;} // json string of the response
-        public required DateTime CreatedAt {get;set;} = DateTime.UtcNow;
+        public int Id { get; set; }
+        public required string Hash { get; set; } // hash string of the image
+        public required string ResponseJson { get; set; } // json string of the response
+        public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 
     public class MatchingRecord
@@ -145,6 +147,18 @@ namespace Shioko.Models
         public required string Content { get; set; }
     }
 
+    public class ImageDataMimeCache
+    {
+        [Key]
+        public int Id { get; set; }
+        public required string Hash { get; set; } // hash string of the image
+        public required string MimeType { get; set; } // mime type of the image
+        public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        [ForeignKey("User")]
+        public int? UserId { get; set; } = null; // if associated with a user
+        public virtual User? User { get; set; }
+    }
+
     //public class PetHistory
     //{
     //    [Key]
@@ -184,6 +198,7 @@ namespace Shioko.Models
         public DbSet<ChatThread> ChatThreads { get; set; }
         public DbSet<UserImage> UserImages { get; set; }
         public DbSet<GoogleVisionCache> GoogleVisionCaches { get; set; }
+        public DbSet<ImageDataMimeCache> ImageDataMimeCaches { get; set; }
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

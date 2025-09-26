@@ -25,6 +25,12 @@ Update-Database
 
 Add-Migration UserImageContentWIP3
 Update-Database
+
+Add-Migration GoogleGeminiGenImageWIP1
+Update-Database
+
+Add-Migration GoogleGeminiGenImageWIP2
+Update-Database
 ```
 
 ## for ubuntu

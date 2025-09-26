@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.IO;
 using System.Security.Claims;
 using System.Text;
 using Google.Cloud.Storage.V1;
@@ -9,6 +10,84 @@ using Shioko.Models;
 
 namespace Shioko.Services
 {
+
+    public class ImageGenResult
+    {
+        public required byte[] image_data { get; set; }
+        public required string mime_type { get; set; }
+    }
+    public interface IImageGenService
+    {
+        Task<ImageGenResult?> GenImage(
+            byte[] image_data_a,
+            string mime_type_a,
+            byte[] image_data_b,
+            string mime_type_b
+        );
+    }
+
+    public class GoogleGeminiApiImageGenService : IImageGenService
+    {
+        private readonly string api_key;
+        private readonly IHttpClientFactory http_client_factory;
+
+        public GoogleGeminiApiImageGenService(
+            IHttpClientFactory http_client_factory,
+            GoogleGeminiApiKeyConfig api_key_config
+            )
+        {
+            this.http_client_factory = http_client_factory;
+            this.api_key = api_key_config.API_KEY;
+        }
+        public async Task<ImageGenResult?> GenImage(byte[] image_data_a, string mime_type_a, byte[] image_data_b, string mime_type_b)
+        {
+            var result = await Utils.GoogleGeminiApiGenerateOffspring(
+                image_data_a,
+                mime_type_a,
+                image_data_b,
+                mime_type_b,
+                api_key,
+                client: http_client_factory.CreateClient(name: Utils.GOOGLE_GEMINI_HTTP_CLIENT_NAME)
+            );
+
+            if (result == null)
+            {
+                return null;
+            }
+
+            return new ImageGenResult
+            {
+                // TODO check for decoding exception
+                image_data = Convert.FromBase64String(result.base64_data),
+                mime_type = result.mime_type,
+            };
+        }
+    }
+
+    public class DummyImageGenService : IImageGenService
+    {
+        private readonly string BASE_PATH;
+        public DummyImageGenService(string base_path)
+        {
+            BASE_PATH = base_path;
+        }
+
+        public async Task<ImageGenResult?> GenImage(byte[] image_data_a, string mime_type_a, byte[] image_data_b, string mime_type_b)
+        {
+            var filepath = Path.Combine(BASE_PATH, $"icon-512.png");
+            if (!File.Exists(filepath))
+            {
+                Log.Error($"DummyImageGenService: {filepath} does not exist");
+                return null;
+            }
+
+            return new ImageGenResult
+            {
+                image_data = await File.ReadAllBytesAsync(filepath),
+                mime_type = IMAGE_MINE_TYPE.PNG,
+            };
+        }
+    }
     public interface IImageUploadService
     {
         Task<string?> UploadImageAsync(Stream stream, string media_type);

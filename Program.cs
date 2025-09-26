@@ -163,9 +163,99 @@ builder.Services.AddAuthentication(options =>
 });
 builder.Services.AddSingleton<TokenService>();
 
+// HttpClient for downloading remote images
+//HttpClient? image_downloader_http_client = null;
+//if (isDevelopment)
+//{
+//    string? proxy_url = Environment.GetEnvironmentVariable("HTTP_PROXY");
+//    if (proxy_url != null)
+//    {
+//        var handler = new HttpClientHandler
+//        {
+//            Proxy = new WebProxy(proxy_url),
+//            UseProxy = true,
+//            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
+//        };
+//        image_downloader_http_client = new HttpClient(handler);
+//    }
+//}
+
+
+//if (image_downloader_http_client == null)
+//{
+//    image_downloader_http_client = new HttpClient();
+//}
+
+builder.Services.AddHttpClient(Utils.DOWNLOAD_REMOTE_IMAGE_HTTP_CLIENT_NAME).ConfigurePrimaryHttpMessageHandler(() =>
+{
+    if (isDevelopment)
+    {
+        string? proxy_url = Environment.GetEnvironmentVariable("HTTP_PROXY");
+        if (!string.IsNullOrWhiteSpace(proxy_url))
+        {
+            Log.Debug("HTTP_PROXY:");
+            Log.Debug(proxy_url);
+
+            return new HttpClientHandler
+            {
+                Proxy = new WebProxy(proxy_url),
+                UseProxy = true,
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
+            };
+        }
+    }
+
+    return new HttpClientHandler();
+});
+
+builder.Services.AddHttpClient(Utils.GOOGLE_GEMINI_HTTP_CLIENT_NAME).ConfigurePrimaryHttpMessageHandler(() =>
+{
+    if (isDevelopment)
+    {
+        string? proxy_url = Environment.GetEnvironmentVariable("HTTP_PROXY");
+        if (!string.IsNullOrWhiteSpace(proxy_url))
+        {
+            Log.Debug("HTTP_PROXY:");
+            Log.Debug(proxy_url);
+
+            return new HttpClientHandler
+            {
+                Proxy = new WebProxy(proxy_url),
+                UseProxy = true,
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
+            };
+        }
+    }
+
+    return new HttpClientHandler();
+});
+
+var GOOGLE_GEMINI_API_KEY = Environment.GetEnvironmentVariable("GOOGLE_GEMINI_API_KEY");
+if (string.IsNullOrWhiteSpace(GOOGLE_GEMINI_API_KEY))
+{
+    string log_message = "GOOGLE_GEMINI_API_KEY is not configured!";
+    Log.Information(log_message);
+    if (!isDevelopment)
+    {
+        throw new Exception(log_message);
+    }
+
+    builder.Services.AddSingleton<IImageGenService>(sp =>
+    {
+        var env = sp.GetRequiredService<IWebHostEnvironment>();
+        return new DummyImageGenService(env.WebRootPath);
+    });
+}
+else
+{
+    builder.Services.AddSingleton(new GoogleGeminiApiKeyConfig { API_KEY = GOOGLE_GEMINI_API_KEY });
+    builder.Services.AddSingleton<IImageGenService, GoogleGeminiApiImageGenService>();
+}
+
 var app = builder.Build();
 
 // setup database
+// TODO backup SQLite database file before applying migration
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -176,8 +266,11 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while migrating the database.");
+        //var logger = services.GetRequiredService<ILogger<Program>>();
+        //logger.LogError(ex, "An error occurred while migrating the database.");
+        Log.Error("An error occurred while migrating the database.");
+        Log.Error(ex.Message);
+        Log.Error(ex.ToString());
         throw;
     }
 }

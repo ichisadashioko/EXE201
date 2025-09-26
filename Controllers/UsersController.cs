@@ -1,37 +1,43 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.AccessControl;
-using System.Security.Cryptography;
+using System.IO;
 using System.Text;
-using Google.Cloud.Storage.V1;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using Shioko.Models;
 using Shioko.Services;
 
 namespace Shioko.Controllers
 {
-
     [ApiController]
     public class UsersController : ControllerBase
     {
         private readonly AppDbContext ctx;
         private readonly TokenService token_service;
         private readonly IImageUploadService upload_service;
+        private readonly IImageGenService image_gen_service;
+        private readonly IHttpClientFactory http_client_factory;
+        private readonly IWebHostEnvironment env;
 
         public UsersController(
             AppDbContext ctx,
             TokenService token_service,
-            IImageUploadService upload_service
+            IImageUploadService upload_service,
+            IHttpClientFactory http_client_factory,
+            IImageGenService image_gen_service,
+            IWebHostEnvironment env
         )
         {
             this.ctx = ctx;
             this.token_service = token_service;
             this.upload_service = upload_service;
+            this.http_client_factory = http_client_factory;
+            this.env = env;
+            this.image_gen_service = image_gen_service;
         }
+
 
         public class ai_generate_offspring_dto
         {
@@ -41,6 +47,8 @@ namespace Shioko.Controllers
             // TODO check max image size 5MB each
             public required string image_a_url { get; set; }
             public required string image_b_url { get; set; }
+            //public required int user_image_id_a { get; set; }
+            //public required int user_image_id_b { get; set; }
         }
 
         public class GenerateOffspring_RESPONSE_DTO
@@ -54,7 +62,6 @@ namespace Shioko.Controllers
         [ProducesResponseType(typeof(GenerateOffspring_RESPONSE_DTO), 200)]
         public async Task<IActionResult> GenerateOffspring([FromBody] ai_generate_offspring_dto input_obj)
         {
-
             try
             {
                 if (!ModelState.IsValid)
@@ -96,11 +103,344 @@ namespace Shioko.Controllers
                     });
                 }
 
+                // TODO validate if user image url is in database
+                string input_image_url_a = input_obj.image_a_url;
+                string input_image_url_b = input_obj.image_b_url;
+
+                UserImage? user_image_a = await ctx.UserImages.FirstOrDefaultAsync(obj => (obj.StorageUrl == input_image_url_a));
+                if (user_image_a == null)
+                {
+                    var image_a_obj = await ctx.PetPictures.FirstOrDefaultAsync(obj => (obj.Url == input_image_url_a));
+                    if (image_a_obj == null)
+                    {
+                        return BadRequest(new
+                        {
+                            message = "invalid input url | input_image_url_a"
+                        });
+                    }
+
+                    user_image_a = await SyncPetPictureWithUserImages(image_a_obj);
+                    if (user_image_a == null)
+                    {
+                        return StatusCode(500, new
+                        {
+                            message = "internal server error | failed to SyncPetPictureWithUserImages"
+                        });
+                    }
+                }
+
+                UserImage? user_image_b = await ctx.UserImages.FirstOrDefaultAsync(obj => (obj.StorageUrl == input_image_url_b));
+                if (user_image_b == null)
+                {
+                    var image_b_obj = await ctx.PetPictures.FirstOrDefaultAsync(obj => (obj.Url == input_image_url_b));
+                    if (image_b_obj == null)
+                    {
+                        return BadRequest(new
+                        {
+                            message = "invalid input url | input_image_url_b"
+                        });
+                    }
+
+                    user_image_b = await SyncPetPictureWithUserImages(image_b_obj);
+                    if (user_image_b == null)
+                    {
+                        return StatusCode(500, new
+                        {
+                            message = "internal server error | failed to SyncPetPictureWithUserImages"
+                        });
+                    }
+                }
+
+                //object? image_a_obj = await ctx.PetPictures.FirstOrDefaultAsync(obj => (obj.Url == input_image_url_a));
+                //if (image_a_obj == null)
+                //{
+                //    image_a_obj = await ctx.UserImages.FirstOrDefaultAsync(obj => (obj.StorageUrl == input_image_url_a));
+                //}
+
+                //if (image_a_obj == null)
+                //{
+                //    return BadRequest(new
+                //    {
+                //        message = "invalid input url | input_image_url_a"
+                //    });
+                //}
+
+                //object? image_b_obj = await ctx.PetPictures.FirstOrDefaultAsync(obj => (obj.Url == input_image_url_b));
+                //if (image_b_obj == null)
+                //{
+                //    image_b_obj = await ctx.UserImages.FirstOrDefaultAsync(obj => (obj.StorageUrl == input_image_url_b));
+                //}
+
+                //if (image_b_obj == null)
+                //{
+                //    return BadRequest(new
+                //    {
+                //        message = "invalid input url | input_image_url_b"
+                //    });
+                //}
+
+                //{
+                //    if (image_a_obj is PetPicture pet_picture)
+                //    {
+                //        user_image_a = await SyncPetPictureWithUserImages(pet_picture);
+                //        if (user_image_a == null)
+                //        {
+                //            return StatusCode(500, new
+                //            {
+                //                message = "internal server error | failed to SyncPetPictureWithUserImages"
+                //            });
+                //        }
+                //    }
+                //}
+                //{
+                //    if (image_b_obj is PetPicture pet_picture)
+                //    {
+                //        user_image_b = await SyncPetPictureWithUserImages(pet_picture);
+                //        if (user_image_b == null)
+                //        {
+                //            return StatusCode(500, new
+                //            {
+                //                message = "internal server error | failed to SyncPetPictureWithUserImages"
+                //            });
+                //        }
+                //    }
+                //}
+
+                var image_downloader_http_client = http_client_factory.CreateClient(Utils.DOWNLOAD_REMOTE_IMAGE_HTTP_CLIENT_NAME);
+                if (image_downloader_http_client == null)
+                {
+                    return StatusCode(500, new
+                    {
+                        // TODO replace with internal error code
+                        message = "internal server error | image_downloader_http_client",
+                    });
+                }
+
+                // TODO google vision cache to extract pet info
+                // TODO check image mine type from cache
+
+                // TODO check for hisotry of generated pair
+                // TODO check for memory leak with MemoryStream
+                var image_data_stream_a = await Utils.PullImageData(
+                    user_image_a.StorageUrl,
+                    image_downloader_http_client,
+                    env.WebRootPath
+                    );
+
+                if (image_data_stream_a == null)
+                {
+                    return StatusCode(500, new
+                    {
+                        message = "internal server error | failed to load image data",
+                    });
+                }
+
+                var hash_a = await Utils.ComputeFileHashAsync(image_data_stream_a);
+                if (hash_a == null)
+                {
+                    return StatusCode(500, new
+                    {
+                        message = "internal server error | failed to compute hash for image data",
+                    });
+                }
+
+                string? mime_type_a = null, mime_type_b = null;
+                var mime_cache_obj = await ctx.ImageDataMimeCaches.FirstOrDefaultAsync(obj => obj.Hash == hash_a);
+                if (mime_cache_obj == null)
+                {
+                    bool is_valid = IMAGE_MINE_TYPE.ValidateImageDataUsingImageSharp(image_data_stream_a, out mime_type_a);
+                    if (mime_type_a != null)
+                    {
+                        await ctx.ImageDataMimeCaches.AddAsync(new ImageDataMimeCache
+                        {
+                            CreatedAt = DateTime.UtcNow,
+                            Hash = hash_a,
+                            MimeType = mime_type_a,
+                            UserId = user_id,
+                        });
+
+                        await ctx.SaveChangesAsync();
+                    }
+
+                    if (!is_valid)
+                    {
+                        return BadRequest(new
+                        {
+                            message = "invalid image data"
+                        });
+                    }
+                }
+                else
+                {
+                    mime_type_a = mime_cache_obj.MimeType;
+                }
+
+                var image_data_stream_b = await Utils.PullImageData(
+                    user_image_b.StorageUrl,
+                    image_downloader_http_client,
+                    env.WebRootPath
+                    );
+
+                if (image_data_stream_b == null)
+                {
+                    return StatusCode(500, new
+                    {
+                        message = "internal server error | failed to load image data",
+                    });
+                }
+
+                var hash_b = await Utils.ComputeFileHashAsync(image_data_stream_b);
+                if (hash_b == null)
+                {
+                    return StatusCode(500, new
+                    {
+                        message = "internal server error | failed to compute hash for image data",
+                    });
+                }
+
+                mime_cache_obj = await ctx.ImageDataMimeCaches.FirstOrDefaultAsync(obj => obj.Hash == hash_b);
+                if (mime_cache_obj == null)
+                {
+                    bool is_valid = IMAGE_MINE_TYPE.ValidateImageDataUsingImageSharp(image_data_stream_b, out mime_type_b);
+                    if (mime_type_b != null)
+                    {
+                        await ctx.ImageDataMimeCaches.AddAsync(new ImageDataMimeCache
+                        {
+                            CreatedAt = DateTime.UtcNow,
+                            Hash = hash_b,
+                            MimeType = mime_type_b,
+                            UserId = user_id,
+                        });
+
+                        await ctx.SaveChangesAsync();
+                    }
+
+                    if (!is_valid)
+                    {
+                        return BadRequest(new
+                        {
+                            message = "invalid image data"
+                        });
+                    }
+                }
+                else
+                {
+                    mime_type_b = mime_cache_obj.MimeType;
+                }
+
+                if ((mime_type_a == null) || (mime_type_b == null))
+                {
+                    return BadRequest(new
+                    {
+                        message = "invalid image data"
+                    });
+                }
+                var result = await image_gen_service.GenImage(
+                    image_data_a: image_data_stream_a.ToArray(),
+                    image_data_b: image_data_stream_b.ToArray(),
+                    mime_type_a: mime_type_a,
+                    mime_type_b: mime_type_b
+                    );
+
+                if (result == null)
+                {
+                    return StatusCode(500, new
+                    {
+                        message = "internal server error | failed to gen image"
+                    });
+                }
+
+                var result_image_hash = await Utils.ComputeFileHashAsync(result.image_data);
+                if (result_image_hash == null)
+                {
+                    return StatusCode(500, new
+                    {
+                        message = "internal server error | failed to compute result image hash"
+                    });
+                }
+
+                bool is_valid_image = false;
+                string? result_image_mime_type_in_db = null;
+                // TODO should we return the image mime type
+                mime_cache_obj = await ctx.ImageDataMimeCaches.FirstOrDefaultAsync(obj => obj.Hash == result_image_hash);
+                if (mime_cache_obj == null)
+                {
+                    is_valid_image = IMAGE_MINE_TYPE.ValidateImageDataUsingImageSharp(result.image_data, out var result_mime_type);
+                    if (result_mime_type != null)
+                    {
+                        result_image_mime_type_in_db = result_mime_type;
+                        await ctx.ImageDataMimeCaches.AddAsync(new ImageDataMimeCache
+                        {
+                            Hash = result_image_hash,
+                            MimeType = result_mime_type,
+                            CreatedAt = DateTime.UtcNow,
+                            UserId = user_id,
+                        });
+
+                        await ctx.SaveChangesAsync();
+                    }
+                }
+                else
+                {
+                    result_image_mime_type_in_db = mime_cache_obj.MimeType;
+                    is_valid_image = IMAGE_MINE_TYPE.IsValidImageMimeType(mime_cache_obj.MimeType);
+                }
+
+                if (!is_valid_image)
+                {
+                    return StatusCode(500, new
+                    {
+                        message = "internal server error | invalid result image"
+                    });
+                }
+
+                if (result_image_mime_type_in_db == null)
+                {
+                    return StatusCode(500, new
+                    {
+                        message = "internal server error | mime type in db"
+                    });
+                }
+
+                if (!result_image_mime_type_in_db.Equals(result.mime_type))
+                {
+                    Log.Warning($"MIME type from result is not the same as the one we validate ({result.mime_type} - {result_image_mime_type_in_db})");
+                }
+
+                string? result_image_url = await upload_service.UploadImageAsync(
+                    new MemoryStream(result.image_data),
+                    result_image_mime_type_in_db
+                );
+
+                if (result_image_url == null)
+                {
+                    return StatusCode(500, new
+                    {
+                        message = "internal server error | failed to upload result image"
+                    });
+                }
+
+                // TODO content moderation with Google Vision API
+
+                await ctx.UserImages.AddAsync(new UserImage
+                {
+                    UserId = user_id,
+                    IsSafe = false,
+                    Hash = result_image_hash,
+                    StorageUrl = result_image_url,
+                    CreatedAt = DateTime.UtcNow,
+                    ModifiedAt = DateTime.UtcNow,
+                    Active = true,
+                });
+                await ctx.SaveChangesAsync();
+                //result.image_data;
+                //result.mime_type;
+
                 // TODO rate limiting using both user ID and IP address
                 return Ok(new
                 {
-                    message = "TODO",
-                    image_url = "/icon-512.png",
+                    message = "OK",
+                    image_url = result_image_url,
                 });
             }
             catch (Exception ex)
@@ -112,6 +452,100 @@ namespace Shioko.Controllers
                     message = "internal server error",
                 });
             }
+        }
+
+        private async Task<string?> compute_hash_from_url(string input_url)
+        {
+            var image_downloader_http_client = http_client_factory.CreateClient(Utils.DOWNLOAD_REMOTE_IMAGE_HTTP_CLIENT_NAME);
+            if (image_downloader_http_client == null)
+            {
+                Log.Error($"failed to create image_downloader_http_client");
+                return null;
+            }
+
+            var image_data_stream = await Utils.PullImageData(
+                input_url,
+                image_downloader_http_client,
+                env.WebRootPath
+            );
+
+            if (image_data_stream == null)
+            {
+                Log.Error($"failed to PullImageData");
+                Log.Error(input_url);
+                return null;
+            }
+
+            return await Utils.ComputeFileHashAsync(image_data_stream);
+        }
+
+        private async Task<UserImage?> SyncPetPictureWithUserImages(PetPicture input_obj)
+        {
+            // TODO check for removed/disabled flag and consider business logic
+            string image_url = input_obj.Url;
+            var user_image_obj = await ctx.UserImages.FirstOrDefaultAsync(obj => (obj.StorageUrl == image_url));
+            if (user_image_obj == null)
+            {
+                Log.Debug($"syncing PetPicture and UserImage - {input_obj.PetPictureId}");
+                var data_hash = await compute_hash_from_url(image_url);
+                if (data_hash == null)
+                {
+                    Log.Debug($"failed to compute data hash for image_url {input_obj.PetPictureId} - {image_url}");
+                    return null;
+                }
+
+                int? user_id = null;
+
+                if (input_obj.Pet == null)
+                {
+                    var pet = await ctx.Pets.FirstOrDefaultAsync(obj => (obj.PetId == input_obj.PetId));
+                    if (pet == null)
+                    {
+                        Log.Debug($"failed to get Pet obj ({input_obj.PetId}) for PetPicture ({input_obj.PetPictureId})");
+                        return null; // TODO return debug message
+                    }
+
+                    user_id = pet.UserId;
+                }
+                else
+                {
+                    user_id = input_obj.Pet.UserId;
+                }
+
+                if (user_id == null)
+                {
+                    Log.Debug($"failed to get owner id for PetPicture {input_obj.PetPictureId}");
+                    return null;
+                }
+
+                user_image_obj = new UserImage
+                {
+                    IsSafe = false,
+                    StorageUrl = image_url,
+                    UserId = user_id.Value, // TODO pull pet object
+                    CreatedAt = input_obj.CreatedAt,
+                    ModifiedAt = DateTime.UtcNow,
+                    Hash = data_hash,
+                    Active = true,
+                };
+
+                await ctx.UserImages.AddAsync(user_image_obj);
+                await ctx.SaveChangesAsync();
+                return user_image_obj;
+            }
+
+            return user_image_obj;
+        }
+
+        //private void CheckPetPictureMimeType(PetPicture input_obj)
+        //{
+        //    input_obj.Url;
+
+        //}
+
+        private void CheckUserImageMineType()
+        {
+
         }
 
         public class users_update_display_name_dto
@@ -753,12 +1187,217 @@ namespace Shioko.Controllers
             public required IFormFile file { get; set; }
         }
 
-        public const int UPLOAD_IMAGE_SIZE_LIMIT = 5242880; // (5 * 1024 * 1024);
+        [HttpPost("/api/users/images/upload")]
+        [Authorize]
+        [RequestSizeLimit(Utils.UPLOAD_IMAGE_SIZE_LIMIT)]
+        [RequestFormLimits(MultipartBodyLengthLimit = Utils.UPLOAD_IMAGE_SIZE_LIMIT)]
+        public async Task<ActionResult> UploadUserImage([FromForm] upload_image_dto input_obj)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new
+                    {
+                        message = "bad request", // TODO replace with error status code
+                    });
+                }
+
+                var file = input_obj.file;
+
+                var user_id_claim = User.FindFirst(CustomClaimTypes.UserId);
+                if (user_id_claim == null)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User ID not found in token", // TODO replace with error status code
+                    });
+                }
+
+                int user_id;
+
+                if (!Int32.TryParse(user_id_claim.Value, out user_id))
+                {
+                    return Unauthorized(new
+                    {
+                        message = "Invalid user ID in token"
+                    });
+                }
+
+                var user = await ctx.Users
+                    .Where(obj => obj.Id == user_id) // TODO add active check
+                    .FirstOrDefaultAsync();
+
+                if (user == null)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "User not found"
+                    });
+                }
+
+                if (file == null || file.Length == 0)
+                {
+                    return BadRequest(new
+                    {
+                        message = "No file uploaded",
+                    });
+                }
+
+                using (var stream = file.OpenReadStream())
+                {
+                    if (stream.Length > Utils.UPLOAD_IMAGE_SIZE_LIMIT)
+                    {
+                        return BadRequest(new
+                        {
+                            message = "file size exceeds limit",
+                        });
+                    }
+
+                    if (stream.Length == 0)
+                    {
+                        return BadRequest(new
+                        {
+                            message = "empty file"
+                        });
+                    }
+
+                    string file_hash;
+                    try
+                    {
+                        file_hash = await Utils.ComputeFileHashAsync(stream);
+                    }
+                    catch (Exception file_hash_ex)
+                    {
+                        Log.Error(file_hash_ex.Message);
+                        Log.Error(file_hash_ex.ToString());
+                        return StatusCode(500, new
+                        {
+                            message = "internal server error",
+                        });
+                    }
+
+                    var cache_obj = await ctx.ImageDataMimeCaches.FirstOrDefaultAsync(obj => obj.Hash == file_hash);
+
+                    string? media_type = null;
+                    if (cache_obj == null)
+                    {
+                        bool is_valid = IMAGE_MINE_TYPE.ValidateImageDataUsingImageSharp(stream, out media_type);
+                        // TODO should we store unknown image file type as unknown?
+                        if (media_type != null)
+                        {
+                            await ctx.ImageDataMimeCaches.AddAsync(new ImageDataMimeCache
+                            {
+                                Hash = file_hash,
+                                MimeType = media_type,
+                                UserId = user_id,
+                                CreatedAt = DateTime.UtcNow,
+                            });
+
+                            await ctx.SaveChangesAsync();
+                        }
+
+                        if (!is_valid)
+                        {
+                            return BadRequest(new
+                            {
+                                message = "unsupported image file",
+                            });
+                        }
+                    }
+                    else
+                    {
+                        media_type = cache_obj.MimeType;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(media_type))
+                    {
+                        return BadRequest(new
+                        {
+                            message = "unsupported image file",
+                        });
+                    }
+
+                    if (!IMAGE_MINE_TYPE.IsValidImageMimeType(media_type))
+                    {
+                        return BadRequest(new
+                        {
+                            message = "unsupported image file",
+                        });
+                    }
+
+                    stream.Seek(0, SeekOrigin.Begin);
+                    // TODO check file content
+
+                    // TODO check image content with Vision API
+
+                    try
+                    {
+                        var public_image_url = await upload_service.UploadImageAsync(stream, media_type);
+                        if (public_image_url == null)
+                        {
+                            return StatusCode(500, new
+                            {
+                                message = "internal server error | failed to upload image",
+                            });
+                        }
+
+                        // TODO call google vision API
+
+                        UserImage user_image = new UserImage
+                        {
+                            UserId = user_id,
+                            StorageUrl = public_image_url,
+                            Hash = file_hash,
+                            IsSafe = false,
+                            CreatedAt = DateTime.UtcNow,
+                            ModifiedAt = DateTime.UtcNow,
+                            Active = true,
+                        };
+
+                        await ctx.UserImages.AddAsync(user_image);
+                        await ctx.SaveChangesAsync();
+
+                        return Ok(new
+                        {
+                            message = "OK",
+                            image_info = new
+                            {
+                                id = user_image.Id,
+                                url = user_image.StorageUrl,
+                                created_ts = user_image.CreatedAt.ToFileTimeUtc(),// TODO unix timestamp
+                            }
+                        });
+                    }
+                    catch (Exception gcs_ex)
+                    {
+                        Log.Information(gcs_ex.ToString());
+                        Log.Information(gcs_ex.Message);
+                        // TODO add more specific error code and status code
+                        return StatusCode(500, new
+                        {
+                            message = "internal server error | failed to upload image",
+                            //message = "internal server error",
+                        });
+                        // TODO
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Information(ex.ToString());
+                Log.Information(ex.Message);
+                return StatusCode(500, new
+                {
+                    message = "internal server error",
+                });
+            }
+        }
 
         [HttpPost("/api/pets/{petId}/images/upload")]
         [Authorize]
-        [RequestSizeLimit(UPLOAD_IMAGE_SIZE_LIMIT)]
-        [RequestFormLimits(MultipartBodyLengthLimit = UPLOAD_IMAGE_SIZE_LIMIT)]
+        [RequestSizeLimit(Utils.UPLOAD_IMAGE_SIZE_LIMIT)]
+        [RequestFormLimits(MultipartBodyLengthLimit = Utils.UPLOAD_IMAGE_SIZE_LIMIT)]
         public async Task<ActionResult> UploadPetImage([FromForm] upload_image_dto input_obj, [FromRoute] int petId)
         {
             try
@@ -823,7 +1462,7 @@ namespace Shioko.Controllers
 
                 using (var stream = file.OpenReadStream())
                 {
-                    if (stream.Length > UPLOAD_IMAGE_SIZE_LIMIT)
+                    if (stream.Length > Utils.UPLOAD_IMAGE_SIZE_LIMIT)
                     {
                         return BadRequest(new
                         {
@@ -831,29 +1470,75 @@ namespace Shioko.Controllers
                         });
                     }
 
-                    // TODO extract this code
-                    string? media_type = null;
-                    // check with request header media type
-                    var buffer = new byte[8];
-                    await stream.ReadAsync(buffer, 0, buffer.Length);
-                    // Check for PNG (89 50 4E 47 0D 0A 1A 0A)
-                    if (buffer[0] == 0x89 && buffer[1] == 0x50 && buffer[2] == 0x4E && buffer[3] == 0x47 &&
-                       buffer[4] == 0x0D && buffer[5] == 0x0A && buffer[6] == 0x1A && buffer[7] == 0x0A)
-                    {
-                        // It's a PNG
-                        media_type = "image/png";
-                    }
-                    // Check for JPEG (FF D8 FF)
-                    else if (buffer[0] == 0xFF && buffer[1] == 0xD8 && buffer[2] == 0xFF)
-                    {
-                        // It's a JPEG
-                        media_type = "image/jpeg";
-                    }
-                    else
+                    if (stream.Length == 0)
                     {
                         return BadRequest(new
                         {
-                            message = "Unsupported file type",
+                            message = "empty file"
+                        });
+                    }
+
+                    string file_hash;
+                    try
+                    {
+                        file_hash = await Utils.ComputeFileHashAsync(stream);
+                    }
+                    catch (Exception file_hash_ex)
+                    {
+                        Log.Error(file_hash_ex.Message);
+                        Log.Error(file_hash_ex.ToString());
+                        return StatusCode(500, new
+                        {
+                            message = "internal server error",
+                        });
+                    }
+
+                    var cache_obj = await ctx.ImageDataMimeCaches.FirstOrDefaultAsync(obj => obj.Hash == file_hash);
+
+                    string? media_type = null;
+                    if (cache_obj == null)
+                    {
+                        bool is_valid = IMAGE_MINE_TYPE.ValidateImageDataUsingImageSharp(stream, out media_type);
+                        // TODO should we store unknown image file type as unknown?
+                        if (media_type != null)
+                        {
+                            await ctx.ImageDataMimeCaches.AddAsync(new ImageDataMimeCache
+                            {
+                                Hash = file_hash,
+                                MimeType = media_type,
+                                UserId = user_id,
+                                CreatedAt = DateTime.UtcNow,
+                            });
+
+                            await ctx.SaveChangesAsync();
+                        }
+
+                        if (!is_valid)
+                        {
+                            return BadRequest(new
+                            {
+                                message = "unsupported image file",
+                            });
+                        }
+                    }
+                    else
+                    {
+                        media_type = cache_obj.MimeType;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(media_type))
+                    {
+                        return BadRequest(new
+                        {
+                            message = "unsupported image file",
+                        });
+                    }
+
+                    if (!IMAGE_MINE_TYPE.IsValidImageMimeType(media_type))
+                    {
+                        return BadRequest(new
+                        {
+                            message = "unsupported image file",
                         });
                     }
 
@@ -862,25 +1547,32 @@ namespace Shioko.Controllers
 
                     // TODO check image content with Vision API
 
-                    if (string.IsNullOrWhiteSpace(media_type))
-                    {
-                        // TODO
-                        return BadRequest(new
-                        {
-                            message = "invalid image file",
-                        });
-                    }
-
                     try
                     {
                         var public_image_url = await upload_service.UploadImageAsync(stream, media_type);
-                        if(public_image_url == null)
+                        if (public_image_url == null)
                         {
                             return StatusCode(500, new
                             {
                                 message = "internal server error | failed to upload image",
                             });
                         }
+
+                        // TODO call google vision API
+
+                        UserImage user_image = new UserImage
+                        {
+                            UserId = user_id,
+                            StorageUrl = public_image_url,
+                            Hash = file_hash,
+                            IsSafe = false,
+                            CreatedAt = DateTime.UtcNow,
+                            ModifiedAt = DateTime.UtcNow,
+                            Active = true,
+                        };
+
+                        await ctx.UserImages.AddAsync(user_image);
+                        await ctx.SaveChangesAsync();
 
                         PetPicture picture = new PetPicture()
                         {
@@ -892,7 +1584,16 @@ namespace Shioko.Controllers
                         await ctx.PetPictures.AddAsync(picture);
                         await ctx.SaveChangesAsync();
 
+                        bool updated_as_profile_picture = false;
                         // TODO automatically set the pet profile picture if currently unset
+                        if (pet_obj.ProfilePictureId == null)
+                        {
+                            pet_obj.ProfilePictureId = picture.PetPictureId;
+
+                            ctx.Pets.Update(pet_obj);
+                            await ctx.SaveChangesAsync();
+                            updated_as_profile_picture = true;
+                        }
                         // TODO sync UI to reflect current state more accurately
 
                         return Ok(new
@@ -904,6 +1605,7 @@ namespace Shioko.Controllers
                                 url = picture.Url,
                                 created_ts = picture.CreatedAt.ToFileTimeUtc(),// TODO unix timestamp
                             },
+                            updated_as_profile_picture = updated_as_profile_picture,
                         });
                     }
                     catch (Exception gcs_ex)
@@ -918,67 +1620,7 @@ namespace Shioko.Controllers
                         });
                         // TODO
                     }
-
-                    //string bucketName = gcs_config.BUCKET_NAME;
-                    //string objectName = $"users/upload/{Guid.NewGuid()}";
-
-                    //try
-                    //{
-                    //    var gcs_object = google_cloud_storage_client.UploadObject(bucketName, objectName, media_type, stream);
-                    //    if (gcs_object == null)
-                    //    {
-                    //        return StatusCode(500, new
-                    //        {
-                    //            message = "internal server error | failed to upload image",
-                    //        });
-                    //    }
-                    //    var public_image_url = gcs_object.MediaLink;
-                    //    PetPicture picture = new PetPicture()
-                    //    {
-                    //        Url = public_image_url,
-                    //        CreatedAt = DateTime.UtcNow,
-                    //        PetId = petId,
-                    //    };
-                    //    await ctx.PetPictures.AddAsync(picture);
-                    //    await ctx.SaveChangesAsync();
-
-                    //    // TODO automatically set the pet profile picture if currently unset
-                    //    // TODO sync UI to reflect current state more accurately
-
-                    //    return Ok(new
-                    //    {
-                    //        message = "OK",
-                    //        image_info = new
-                    //        {
-                    //            id = picture.PetPictureId,
-                    //            url = picture.Url,
-                    //            created_ts = picture.CreatedAt.ToFileTimeUtc(),// TODO unix timestamp
-                    //        },
-                    //    });
-                    //}
-                    //catch (Exception gcs_ex)
-                    //{
-                    //    Log.Information(gcs_ex.ToString());
-                    //    Log.Information(gcs_ex.Message);
-                    //    // TODO add more specific error code and status code
-                    //    return StatusCode(500, new
-                    //    {
-                    //        message = "internal server error | failed to upload image",
-                    //        //message = "internal server error",
-                    //    });
-                    //    // TODO
-                    //}
                 }
-                // TODO validate file type using magic header
-                //var stream = file.OpenReadStream();
-                //stream.ReadAsync();
-
-                //return StatusCode(500, "TODO");
-                //return Ok(new
-                //{
-                //    user = user
-                //});
-
             }
             catch (Exception ex)
             {

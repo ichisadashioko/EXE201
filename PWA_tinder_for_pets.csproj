@@ -19,18 +19,22 @@
     <Compile Remove="scripts\**" />
     <Compile Remove="testing_scripts\**" />
     <Compile Remove="wwwroot\create-vite-ui-project\**" />
+    <Compile Remove="wwwroot\EXE201_UI\**" />
     <Content Remove="publish\**" />
     <Content Remove="scripts\**" />
     <Content Remove="testing_scripts\**" />
     <Content Remove="wwwroot\create-vite-ui-project\**" />
+    <Content Remove="wwwroot\EXE201_UI\**" />
     <EmbeddedResource Remove="publish\**" />
     <EmbeddedResource Remove="scripts\**" />
     <EmbeddedResource Remove="testing_scripts\**" />
     <EmbeddedResource Remove="wwwroot\create-vite-ui-project\**" />
+    <EmbeddedResource Remove="wwwroot\EXE201_UI\**" />
     <None Remove="publish\**" />
     <None Remove="scripts\**" />
     <None Remove="testing_scripts\**" />
     <None Remove="wwwroot\create-vite-ui-project\**" />
+    <None Remove="wwwroot\EXE201_UI\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -61,7 +65,17 @@
 	  <PackageReference Include="Serilog" Version="4.3.0" />
 	  <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
 	  <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+	  <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="wwwroot\app_bundle.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="wwwroot\app_bundle.js.map">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

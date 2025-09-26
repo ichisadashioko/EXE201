@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Shioko.Models;
 
@@ -10,9 +11,11 @@ using Shioko.Models;
 namespace PWA_tinder_for_pets.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250925123550_GoogleGeminiGenImageWIP1")]
+    partial class GoogleGeminiGenImageWIP1
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.17");
@@ -124,7 +127,7 @@ namespace PWA_tinder_for_pets.Migrations
                     b.ToTable("GoogleVisionCaches");
                 });
 
-            modelBuilder.Entity("Shioko.Models.ImageDataMimeCache", b =>
+            modelBuilder.Entity("Shioko.Models.ImageDataMineCache", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -148,7 +151,7 @@ namespace PWA_tinder_for_pets.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ImageDataMimeCaches");
+                    b.ToTable("ImageDataMineCaches");
                 });
 
             modelBuilder.Entity("Shioko.Models.MatchingRecord", b =>
@@ -374,7 +377,7 @@ namespace PWA_tinder_for_pets.Migrations
                     b.Navigation("UserB");
                 });
 
-            modelBuilder.Entity("Shioko.Models.ImageDataMimeCache", b =>
+            modelBuilder.Entity("Shioko.Models.ImageDataMineCache", b =>
                 {
                     b.HasOne("Shioko.Models.User", "User")
                         .WithMany()

@@ -24,3 +24,4 @@ tinder.service
 logs
 *.zip
 *backup*
+uploads
