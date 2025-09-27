@@ -8,32 +8,32 @@
 
   <PropertyGroup>
     <ExcludeFilesOnPublish>
-      scripts;node_modules;package.json;package-lock.json;create-vite-ui-project;backup_package.json
+      scripts;node_modules;package.json;package-lock.json
     </ExcludeFilesOnPublish>
     <AssemblyName>tinderserver</AssemblyName>
     <RootNamespace>Shioko.Tinder</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="logs\**" />
     <Compile Remove="publish\**" />
     <Compile Remove="scripts\**" />
     <Compile Remove="testing_scripts\**" />
-    <Compile Remove="wwwroot\create-vite-ui-project\**" />
     <Compile Remove="wwwroot\EXE201_UI\**" />
+    <Content Remove="logs\**" />
     <Content Remove="publish\**" />
     <Content Remove="scripts\**" />
     <Content Remove="testing_scripts\**" />
-    <Content Remove="wwwroot\create-vite-ui-project\**" />
     <Content Remove="wwwroot\EXE201_UI\**" />
+    <EmbeddedResource Remove="logs\**" />
     <EmbeddedResource Remove="publish\**" />
     <EmbeddedResource Remove="scripts\**" />
     <EmbeddedResource Remove="testing_scripts\**" />
-    <EmbeddedResource Remove="wwwroot\create-vite-ui-project\**" />
     <EmbeddedResource Remove="wwwroot\EXE201_UI\**" />
+    <None Remove="logs\**" />
     <None Remove="publish\**" />
     <None Remove="scripts\**" />
     <None Remove="testing_scripts\**" />
-    <None Remove="wwwroot\create-vite-ui-project\**" />
     <None Remove="wwwroot\EXE201_UI\**" />
   </ItemGroup>
 
@@ -43,7 +43,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="PWA_tinder_for_pets.csproj.Backup.tmp" />
     <None Remove="shioko.sqlite" />
     <None Remove="shioko.sqlite-shm" />
     <None Remove="shioko.sqlite-wal" />

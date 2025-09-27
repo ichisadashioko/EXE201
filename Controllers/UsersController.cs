@@ -1017,7 +1017,7 @@ namespace Shioko.Controllers
                     {
                         id = picture.PetPictureId,
                         url = picture.Url,
-                        created_ts = picture.CreatedAt.ToFileTimeUtc(),
+                        created_ts = picture.CreatedAt.ToUnixTS(),
                     }),
                     // TODO
                 });
@@ -1109,7 +1109,7 @@ namespace Shioko.Controllers
                     {
                         id = picture.PetPictureId,
                         url = picture.Url,
-                        created_ts = picture.CreatedAt.ToFileTimeUtc(),
+                        created_ts = picture.CreatedAt.ToUnixTS(),
                     }),
                 }).ToList();
 
@@ -1214,7 +1214,7 @@ namespace Shioko.Controllers
                     {
                         id = picture.PetPictureId,
                         url = picture.Url,
-                        created_ts = picture.CreatedAt.ToFileTimeUtc(),
+                        created_ts = picture.CreatedAt.ToUnixTS(),
                     }),
                     // TODO
                 });
@@ -1498,7 +1498,7 @@ namespace Shioko.Controllers
                             {
                                 id = user_image.Id,
                                 url = user_image.StorageUrl,
-                                created_ts = user_image.CreatedAt.ToFileTimeUtc(),// TODO unix timestamp
+                                created_ts = user_image.CreatedAt.ToUnixTS(),// TODO unix timestamp
                             }
                         });
                     }
@@ -1736,7 +1736,7 @@ namespace Shioko.Controllers
                             {
                                 id = picture.PetPictureId,
                                 url = picture.Url,
-                                created_ts = picture.CreatedAt.ToFileTimeUtc(),// TODO unix timestamp
+                                created_ts = picture.CreatedAt.ToUnixTS(),// TODO unix timestamp
                             },
                             updated_as_profile_picture = updated_as_profile_picture,
                         });
