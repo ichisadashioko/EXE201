@@ -1272,6 +1272,14 @@ namespace Shioko.Controllers
                         });
                     }
 
+                    if(string.IsNullOrWhiteSpace(input_obj.name) || input_obj.name.Length > 100)
+                    {
+                        return BadRequest(new
+                        {
+                            message = "Invalid pet name"
+                        });
+                    }
+
                     Pet pet = new Pet()
                     {
                         Name = input_obj.name,
