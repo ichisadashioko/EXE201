@@ -66,6 +66,10 @@ dotnet publish --os linux --self-contained true --interactive --configuration Re
 dotnet publish --os "win" --self-contained true --interactive --configuration Release --output "publish_win-x64"
 dotnet publish --os "win" --self-contained true --interactive --configuration Release --output "publish_win_x64_release"
 dotnet publish --os "win" --self-contained true --interactive --configuration Debug --output "publish_win_x64_debug"
+
+dotnet publish --os "win" --interactive --configuration Debug --output "../tinderserver_publish_win_x64_debug"
+
+dotnet publish --os linux --self-contained true --interactive --configuration Release --output "../tinderserver_linux_x64_release_publish"
 ```
 
 # `scp` command

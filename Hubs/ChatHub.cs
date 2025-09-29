@@ -30,6 +30,12 @@ namespace Shioko.Tinder.Hubs
                 return;
             }
 
+            var user_obj = ctx.Users.FirstOrDefault(obj => obj.Id == senderUserId);
+            if(user_obj == null)
+            {
+                return;
+            }
+
             // TODO validate chatThreadId (CRUD in database)
             // TODO validate/moderate messsageContent
 
@@ -54,6 +60,7 @@ namespace Shioko.Tinder.Hubs
                 //createdAt = message.CreatedAt,
                 id = chatThreadId,
                 senderUserId = senderUserId,
+                sender_name = user_obj.DisplayName,
                 content = messsageContent,
                 timestamp = ((DateTimeOffset)message.CreatedAt).ToUnixTimeSeconds(),
             });

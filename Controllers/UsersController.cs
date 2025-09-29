@@ -774,6 +774,7 @@ namespace Shioko.Controllers
 
             var thread = await ctx.ChatThreads
                 .Include(ct => ct.Messages)
+                .ThenInclude(obj => obj.SenderUser)
                 .FirstOrDefaultAsync(ct => ct.Id == thread_id);
 
             if (thread == null || (thread.UserAId != meId && thread.UserBId != meId))
@@ -787,6 +788,7 @@ namespace Shioko.Controllers
                 {
                     id = m.Id,
                     senderUserId = m.SenderUserId,
+                    sender_name = m.SenderUser.DisplayName,
                     content = m.Content,
                     timestamp = ((DateTimeOffset)m.CreatedAt).ToUnixTimeSeconds(),
                     //Timestamp = (m.CreatedAt).ToUnixTimeSeconds(),
