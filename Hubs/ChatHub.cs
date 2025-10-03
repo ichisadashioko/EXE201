@@ -31,7 +31,7 @@ namespace Shioko.Tinder.Hubs
             }
 
             var user_obj = ctx.Users.FirstOrDefault(obj => obj.Id == senderUserId);
-            if(user_obj == null)
+            if (user_obj == null)
             {
                 return;
             }

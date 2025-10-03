@@ -31,6 +31,9 @@ Update-Database
 
 Add-Migration GoogleGeminiGenImageWIP2
 Update-Database
+
+Add-Migration AddApiUsageLog
+Update-Database
 ```
 
 ## for ubuntu

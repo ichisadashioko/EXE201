@@ -3,7 +3,6 @@ using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Shioko.Models;
@@ -20,6 +19,7 @@ namespace Shioko.Controllers
         private readonly IImageGenService image_gen_service;
         private readonly IHttpClientFactory http_client_factory;
         private readonly IWebHostEnvironment env;
+        private readonly RateLimitingService rate_limiting_service;
 
         public UsersController(
             AppDbContext ctx,
@@ -27,6 +27,7 @@ namespace Shioko.Controllers
             IImageUploadService upload_service,
             IHttpClientFactory http_client_factory,
             IImageGenService image_gen_service,
+            RateLimitingService rate_limiting_service,
             IWebHostEnvironment env
         )
         {
@@ -36,6 +37,7 @@ namespace Shioko.Controllers
             this.http_client_factory = http_client_factory;
             this.env = env;
             this.image_gen_service = image_gen_service;
+            this.rate_limiting_service = rate_limiting_service;
         }
 
 
@@ -123,7 +125,7 @@ namespace Shioko.Controllers
                 var other_image_hash = input_obj.hash;
                 if (other_image_hash != null)
                 {
-                   // TODO filter pet type using google vision api caches
+                    // TODO filter pet type using google vision api caches
                 }
 
                 List<string> pet_image_url_list = new List<string>();
@@ -234,6 +236,28 @@ namespace Shioko.Controllers
                     {
                         message = "User not found"
                     });
+                }
+
+                var rate_limit_retval = await rate_limiting_service.IsActionAllowedAsync(user_id, RateLimitedFeatures.IMAGE_GEN);
+                Log.Debug(rate_limit_retval.ToString());
+
+                string debug_message = Utils.IsDevelopment() ? rate_limit_retval.Message : "";
+                if (!rate_limit_retval.IsAllowed)
+                {
+                    if (string.IsNullOrWhiteSpace(debug_message))
+                    {
+                        return StatusCode(429, new
+                        {
+                            message = "try again later",
+                        });
+                    }
+                    else
+                    {
+                        return StatusCode(429, new
+                        {
+                            message = $"try again later - {debug_message}",
+                        });
+                    }
                 }
 
                 // TODO validate if user image url is in database
@@ -482,6 +506,8 @@ namespace Shioko.Controllers
                         message = "internal server error | failed to gen image"
                     });
                 }
+
+                await rate_limiting_service.LogUsageAsync(user_id, RateLimitedFeatures.IMAGE_GEN);
 
                 var result_image_hash = await Utils.ComputeFileHashAsync(result.image_data);
                 if (result_image_hash == null)
@@ -1274,7 +1300,7 @@ namespace Shioko.Controllers
                         });
                     }
 
-                    if(string.IsNullOrWhiteSpace(input_obj.name) || input_obj.name.Length > 100)
+                    if (string.IsNullOrWhiteSpace(input_obj.name) || input_obj.name.Length > 100)
                     {
                         return BadRequest(new
                         {
@@ -1378,6 +1404,31 @@ namespace Shioko.Controllers
                         message = "User not found"
                     });
                 }
+
+                var rate_limit_retval = await rate_limiting_service.IsActionAllowedAsync(user_id, RateLimitedFeatures.IMAGE_UPLOAD);
+                Log.Debug(rate_limit_retval.ToString());
+
+                string debug_message = Utils.IsDevelopment() ? rate_limit_retval.Message : "";
+                if (!rate_limit_retval.IsAllowed)
+                {
+                    if (string.IsNullOrWhiteSpace(debug_message))
+                    {
+                        return StatusCode(429, new
+                        {
+                            message = "try again later",
+                        });
+                    }
+                    else
+                    {
+                        return StatusCode(429, new
+                        {
+                            message = $"try again later - {debug_message}",
+                        });
+                    }
+                }
+
+                // TODO should we call this after doing all the expensive computation?
+                await rate_limiting_service.LogUsageAsync(user_id, RateLimitedFeatures.IMAGE_UPLOAD);
 
                 if (file == null || file.Length == 0)
                 {
@@ -1585,6 +1636,31 @@ namespace Shioko.Controllers
                         message = "User not found"
                     });
                 }
+
+                var rate_limit_retval = await rate_limiting_service.IsActionAllowedAsync(user_id, RateLimitedFeatures.IMAGE_UPLOAD);
+                Log.Debug(rate_limit_retval.ToString());
+
+                string debug_message = Utils.IsDevelopment() ? rate_limit_retval.Message : "";
+                if (!rate_limit_retval.IsAllowed)
+                {
+                    if (string.IsNullOrWhiteSpace(debug_message))
+                    {
+                        return StatusCode(429, new
+                        {
+                            message = "try again later",
+                        });
+                    }
+                    else
+                    {
+                        return StatusCode(429, new
+                        {
+                            message = $"try again later - {debug_message}",
+                        });
+                    }
+                }
+
+                // TODO should we call this after doing all the expensive computation?
+                await rate_limiting_service.LogUsageAsync(user_id, RateLimitedFeatures.IMAGE_UPLOAD);
 
                 if (file == null || file.Length == 0)
                 {

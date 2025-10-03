@@ -3,6 +3,7 @@ using System.IO;
 using System.Security.Claims;
 using System.Text;
 using Google.Cloud.Storage.V1;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
@@ -10,6 +11,73 @@ using Shioko.Models;
 
 namespace Shioko.Services
 {
+    public static class RateLimitedFeatures
+    {
+        public const string IMAGE_GEN = "image_gen";
+        public const string IMAGE_UPLOAD = "image_upload";
+    }
+
+    public class RateLimitingService
+    {
+        private readonly AppDbContext ctx;
+        public RateLimitingService(AppDbContext context)
+        {
+            ctx = context;
+        }
+
+        // Define temporary limits here. TODO this could come from appsettings.json or database data
+        private static readonly Dictionary<string, (int FreeLimit, int PremiumLimit, TimeSpan Period)> FeatureLimits = new(){
+            { RateLimitedFeatures.IMAGE_GEN, (FreeLimit: 1, PremiumLimit: 20, Period: TimeSpan.FromMinutes(1)) },
+            { RateLimitedFeatures.IMAGE_UPLOAD, (FreeLimit: 10, PremiumLimit: 50, Period: TimeSpan.FromMinutes(1)) },
+        };
+
+        public async Task<(bool IsAllowed, string Message)> IsActionAllowedAsync(int user_id, string feature_name)
+        {
+            var user = await ctx.Users.FindAsync(user_id);
+            if (user == null)
+            {
+                return (false, "User not found");
+            }
+
+            if (!FeatureLimits.TryGetValue(feature_name, out var limit_config))
+            {
+                // TODO block unknown feature_name?
+                return (true, $"feature is not rate limited ({feature_name})"); // TODO debug log
+            }
+
+            var (free_limit, premium_limit, period) = limit_config;
+            var limit = user.IsPremium ? premium_limit : free_limit;
+
+            var since_time = DateTime.UtcNow - period;
+            var action_count = await ctx.ApiUsageLogs
+                .Where(log => (
+                    (log.UserId == user_id)
+                    && (log.FeatureName == feature_name)
+                    && (log.CreatedAt >= since_time)
+                )).CountAsync();
+
+            if (action_count >= limit)
+            {
+                // TODO make serialized data for more information
+                return (false, $"Rate limit exceeded for feature {feature_name}. Limit: {limit} per {period.TotalMinutes} minutes.");
+            }
+
+            return (true, "Action is allowed.");
+        }
+
+        public async Task LogUsageAsync(int user_id, string feature_name)
+        {
+            var log_entry = new ApiUsageLog
+            {
+                UserId = user_id,
+                FeatureName = feature_name,
+                CreatedAt = DateTime.UtcNow,
+            };
+
+            ctx.ApiUsageLogs.Add(log_entry);
+            await ctx.SaveChangesAsync();
+        }
+    }
 
     public class ImageGenResult
     {

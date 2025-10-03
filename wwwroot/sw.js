@@ -49,7 +49,7 @@ self.addEventListener('activate', (event) => {
 
 // on fetch, intercept server requests and respond with cached responses instead of going to network
 self.addEventListener('fetch', (event) => {
-    console.log(`sw.js: Fetch event for ${event.request.url}`);
+    console.debug(`sw.js: Fetch event for ${event.request.url}`);
     // when seeking an HTML page
     // if (event.request.mode === 'navigate') {
     //     // return to the index.html page

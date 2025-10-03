@@ -25,7 +25,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>();
 builder.Services.AddSignalR();
 
-bool isDevelopment = string.Equals(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), "development", StringComparison.InvariantCultureIgnoreCase);
+bool isDevelopment = Utils.IsDevelopment();
 Log.Information($"isDevelopment : {isDevelopment}");
 
 
@@ -162,6 +162,8 @@ builder.Services.AddAuthentication(options =>
     };
 });
 builder.Services.AddSingleton<TokenService>();
+//builder.Services.AddSingleton<RateLimitingService>();
+builder.Services.AddScoped<RateLimitingService>();
 
 // HttpClient for downloading remote images
 //HttpClient? image_downloader_http_client = null;

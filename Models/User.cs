@@ -21,6 +21,26 @@ namespace Shioko.Models
         public DateTime CreatedAt { get; set; }
         public bool Active { get; set; } = true;
         public virtual ICollection<ChatMessage> ChatMessages { get; set; }
+
+        public DateTime? PremiumExpirationDate { get; set; } = null;
+
+        [NotMapped]
+        public bool IsPremium => (
+            (PremiumExpirationDate.HasValue)
+            && (PremiumExpirationDate.Value > DateTime.UtcNow)
+            );
+    }
+
+    public class ApiUsageLog
+    {
+        [Key]
+        public int Id { get; set; }
+        [ForeignKey("User")]
+        public required int UserId { get; set; }
+        public virtual User User { get; set; }
+
+        public required string FeatureName { get; set; } // e.g. "AI_Offspring_Generation"
+        public required DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 
     public static class PROVIDER_TYPE
@@ -199,6 +219,7 @@ namespace Shioko.Models
         public DbSet<UserImage> UserImages { get; set; }
         public DbSet<GoogleVisionCache> GoogleVisionCaches { get; set; }
         public DbSet<ImageDataMimeCache> ImageDataMimeCaches { get; set; }
+        public DbSet<ApiUsageLog> ApiUsageLogs { get; set; }
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
